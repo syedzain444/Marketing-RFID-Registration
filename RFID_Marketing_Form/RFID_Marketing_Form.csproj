@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -192,6 +192,8 @@
     <Content Include="Content\themes\base\minified\jquery.ui.tabs.min.css" />
     <Content Include="Content\themes\base\minified\jquery.ui.theme.min.css" />
     <Content Include="Images\logo.png" />
+    <Content Include="Images\LogoB.png" />
+    <Content Include="Images\logoN.png" />
     <Content Include="Images\logo-mono.png" />
     <Content Include="Images\accent.png" />
     <Content Include="Images\bullet.png" />
@@ -242,12 +244,28 @@
     <Content Include="Scripts\WebForms\WebUIValidation.js" />
     <Content Include="Scripts\_references.js" />
     <Content Include="Default.aspx" />
+    <Content Include="MarketingLogin.aspx" />
+    <Content Include="MarketingLogout.aspx" />
+    <Content Include="AdminUsers.aspx" />
+    <Content Include="RolePermissions.aspx" />
+    <Content Include="Content\marketing-login.css" />
+    <Content Include="Content\admin-access.css" />
+    <Content Include="Content\role-permissions.css" />
+    <Content Include="Content\marketing-sidebar.css" />
+    <Content Include="Content\admin-users.css" />
+    <Content Include="Content\marketing-wide.css" />
+    <Content Include="Content\marketing-dashboard.css" />
+    <Content Include="Controls\MarketingSidebar.ascx" />
+    <Content Include="Controls\RfidNewRequestForm.ascx" />
     <Content Include="Records.aspx" />
     <Content Include="RfidCheck.ashx" />
     <Content Include="RfidRecords.ashx" />
+    <Content Include="RfidFormSave.ashx" />
+    <Content Include="MarketingUsers.ashx" />
     <Content Include="EmpPhoto.ashx" />
     <Content Include="PhotoUpload.ashx" />
     <Content Include="Captcha.ashx" />
+    <Content Include="LoginCss.ashx" />
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Web.config">
@@ -307,10 +325,61 @@
     <Compile Include="Contact.aspx.designer.cs">
       <DependentUpon>Contact.aspx</DependentUpon>
     </Compile>
+    <Compile Include="App\MarketingAuthModule.cs" />
+    <Compile Include="Controls\MarketingSidebar.ascx.cs">
+      <DependentUpon>MarketingSidebar.ascx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Controls\MarketingSidebar.ascx.designer.cs">
+      <DependentUpon>MarketingSidebar.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Data\AppPermissionCodes.cs" />
+    <Compile Include="Data\MarketingNavSection.cs" />
+    <Compile Include="Data\MarketingAuthContext.cs" />
+    <Compile Include="Data\MarketingAuthModels.cs" />
+    <Compile Include="Data\MarketingAuthRepository.cs" />
+    <Compile Include="Data\PasswordHasher.cs" />
     <Compile Include="Data\PhotoStorage.cs" />
     <Compile Include="Data\RfidModels.cs" />
     <Compile Include="Data\RfidRepository.cs" />
     <Compile Include="Data\RfidValidator.cs" />
+    <Compile Include="Data\FamilyCardValidator.cs" />
+    <Compile Include="Data\RfidFormSaveService.cs" />
+    <Compile Include="MarketingPageBase.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="MarketingLogin.aspx.cs">
+      <DependentUpon>MarketingLogin.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="MarketingLogin.aspx.designer.cs">
+      <DependentUpon>MarketingLogin.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="MarketingLogout.aspx.cs">
+      <DependentUpon>MarketingLogout.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AdminUsers.aspx.cs">
+      <DependentUpon>AdminUsers.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AdminUsers.aspx.designer.cs">
+      <DependentUpon>AdminUsers.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="RolePermissions.aspx.cs">
+      <DependentUpon>RolePermissions.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="RolePermissions.aspx.designer.cs">
+      <DependentUpon>RolePermissions.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Records.aspx.cs">
+      <DependentUpon>Records.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Records.aspx.designer.cs">
+      <DependentUpon>Records.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -324,6 +393,12 @@
     <Compile Include="RfidRecords.ashx.cs">
       <DependentUpon>RfidRecords.ashx</DependentUpon>
     </Compile>
+    <Compile Include="RfidFormSave.ashx.cs">
+      <DependentUpon>RfidFormSave.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="MarketingUsers.ashx.cs">
+      <DependentUpon>MarketingUsers.ashx</DependentUpon>
+    </Compile>
     <Compile Include="EmpPhoto.ashx.cs">
       <DependentUpon>EmpPhoto.ashx</DependentUpon>
     </Compile>
@@ -332,6 +407,9 @@
     </Compile>
     <Compile Include="Captcha.ashx.cs">
       <DependentUpon>Captcha.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="LoginCss.ashx.cs">
+      <DependentUpon>LoginCss.ashx</DependentUpon>
     </Compile>
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>

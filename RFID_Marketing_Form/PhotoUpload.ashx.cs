@@ -1,15 +1,28 @@
 using System.Web;
 using System.Web.Script.Serialization;
+using System.Web.SessionState;
 using RFID_Marketing_Form.Data;
 
 namespace RFID_Marketing_Form
 {
-    public class PhotoUpload : IHttpHandler
+    public class PhotoUpload : IHttpHandler, IRequiresSessionState
     {
         public void ProcessRequest(HttpContext context)
         {
             context.Response.ContentType = "application/json";
             context.Response.Cache.SetCacheability(HttpCacheability.NoCache);
+
+            MarketingAuthContext.EnsurePermissionsLoaded(context);
+            if (!MarketingAuthContext.HasAnyPermission(
+                context,
+                AppPermissionCodes.ActionRecordsPhoto,
+                AppPermissionCodes.ActionFormSave,
+                AppPermissionCodes.ActionRecordsEdit))
+            {
+                Write(context, false, "You do not have permission to upload photos.", null, null);
+                context.Response.StatusCode = 403;
+                return;
+            }
 
             if (context.Request.HttpMethod != "POST")
             {

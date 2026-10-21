@@ -1,4 +1,5 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="RFID_Marketing_Form._Default" ClientIDMode="Static" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="RFID_Marketing_Form._Default" ClientIDMode="Static" %>
+<%@ Register Src="~/Controls/MarketingSidebar.ascx" TagPrefix="uc" TagName="MarketingSidebar" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,10 +10,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+    <link href="Content/marketing-sidebar.css?v=4" rel="stylesheet" />
+    <link href="Content/marketing-wide.css?v=1" rel="stylesheet" />
     <link href="Content/rfid.css" rel="stylesheet" />
 </head>
-<body>
-    <form id="form1" runat="server" autocomplete="off" enctype="multipart/form-data">
+<body class="marketing-app">
+    <form id="form1" runat="server" autocomplete="off" enctype="multipart/form-data" class="marketing-shell">
+        <uc:MarketingSidebar runat="server" ID="marketingSidebar" />
+        <div class="marketing-main">
         <header class="topbar">
             <div class="brand">
                 <span class="mark" aria-hidden="true">
@@ -30,7 +35,6 @@
                 </div>
             </div>
             <div class="actions">
-                <a href="Records.aspx" class="btn btn-ghost">View records</a>
                 <button type="button" id="btnClear" class="btn btn-ghost">Clear</button>
                 <asp:Button ID="btnSave" runat="server" Text="Save Record" CssClass="btn btn-primary btn-icon-save" OnClick="btnSave_Click" OnClientClick="return RfidForm.validateBeforeSubmit();" />
             </div>
@@ -55,12 +59,6 @@
                                     <label for="txtEmpId">Employee ID <span class="req">*</span></label>
                                     <div class="input-shell input-shell--user">
                                         <asp:TextBox ID="txtEmpId" runat="server" MaxLength="20" CssClass="input-control" placeholder="e.g. 10428" />
-                                    </div>
-                                </div>
-                                <div class="field" data-field="rfid">
-                                    <label for="txtRfid">RFID Number <span class="req">*</span></label>
-                                    <div class="input-shell input-shell--rfid">
-                                        <asp:TextBox ID="txtRfid" runat="server" MaxLength="50" CssClass="input-control mono" placeholder="e.g. 123456" />
                                     </div>
                                 </div>
                                 <div class="field" data-field="grade">
@@ -150,24 +148,6 @@
                                         <button type="button" class="chip-btn" data-months="6">6 mo</button>
                                         <button type="button" class="chip-btn" data-months="12">1 yr</button>
                                         <button type="button" class="chip-btn" data-months="24">2 yr</button>
-                                    </div>
-                                </div>
-                                <div class="field" data-field="print">
-                                    <label for="txtPrintDate">Print date <span class="req cond" data-cond="print">*</span></label>
-                                    <div class="input-shell input-shell--date">
-                                        <asp:TextBox ID="txtPrintDate" runat="server" TextMode="Date" CssClass="input-control" />
-                                    </div>
-                                </div>
-                                <div class="field" data-field="issuedBy">
-                                    <label for="txtIssuedBy">Issued by <span class="req">*</span></label>
-                                    <div class="input-shell input-shell--user">
-                                        <asp:TextBox ID="txtIssuedBy" runat="server" MaxLength="50" CssClass="input-control" placeholder="Name" />
-                                    </div>
-                                </div>
-                                <div class="field" data-field="created">
-                                    <label for="txtCreatedDate">Created date <span class="req">*</span></label>
-                                    <div class="input-shell input-shell--date">
-                                        <asp:TextBox ID="txtCreatedDate" runat="server" TextMode="Date" CssClass="input-control" />
                                     </div>
                                 </div>
                             </div>
@@ -260,20 +240,18 @@
                     <section class="sidebar-card meter">
                         <div class="meter-row">
                             <span class="meter-title">Before you can save</span>
-                            <strong id="meterCount">0 of 6 done</strong>
+                            <strong id="meterCount">0 of 4 done</strong>
                         </div>
                         <div class="meter-seg" id="meterSeg" aria-hidden="true">
-                            <span></span><span></span><span></span><span></span><span></span><span></span>
+                            <span></span><span></span><span></span><span></span>
                         </div>
                         <ul class="checks checks--grid" id="checkList">
                             <li data-check="emp"><span class="check-ico" aria-hidden="true"></span>Employee ID</li>
-                            <li data-check="rfid"><span class="check-ico" aria-hidden="true"></span>RFID number</li>
                             <li data-check="status"><span class="check-ico" aria-hidden="true"></span>Status</li>
                             <li data-check="issue"><span class="check-ico" aria-hidden="true"></span>Issue date</li>
-                            <li data-check="issuedBy"><span class="check-ico" aria-hidden="true"></span>Issued by</li>
                             <li data-check="extra"><span class="check-ico" aria-hidden="true"></span>HOD &amp; approval</li>
                         </ul>
-                        <button type="button" id="btnSaveAside" class="btn btn-primary btn-icon-save btn-save-aside">Save record</button>
+                        <button type="button" id="btnSaveAside" runat="server" class="btn btn-primary btn-icon-save btn-save-aside">Save record</button>
                     </section>
 
                 </aside>
@@ -294,10 +272,11 @@
                 </div>
             </div>
         </div>
+        </div>
         <script>window.RFID_APP_ROOT = '<%= ResolveUrl("~/") %>';</script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="Scripts/rfid-photos.js"></script>
-        <script src="Scripts/rfid-form.js"></script>
+        <script src="Scripts/rfid-form.js?v=4"></script>
     </form>
 </body>
 </html>

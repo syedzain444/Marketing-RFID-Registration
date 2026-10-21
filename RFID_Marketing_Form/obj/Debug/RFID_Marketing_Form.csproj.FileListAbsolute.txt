@@ -66,5 +66,6 @@ D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\WhatsApp Image 2026-03-15 at 8.45.10 PM.jpeg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\WhatsApp Image 2026-08-29 at 4.26.36 PM.jpeg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain.jpeg
-D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csprojResolveAssemblyReference.cache
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain-2.jpeg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csprojResolveAssemblyReference.cache
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\0ef667fe-b98a-421a-b6dd-3737df78c870_removalai_preview.png

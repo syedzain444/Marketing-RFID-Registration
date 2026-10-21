@@ -105,17 +105,17 @@ namespace RFID_Marketing_Form.Data
             {
                 var table = ResolveTable(cs);
                 var rows = new List<RfidRecord>();
-                const string sql = "SELECT ID, EMP_ID, RFID_NUMBER, STATUS, ISSUE_DATE, ISSUED_BY, IS_APPROVED, CREATED_DATE FROM {0} ORDER BY ID DESC";
+                var listSql = BuildListSelect(table);
                 using (var conn = new OracleConnection(cs))
                 {
                     conn.Open();
                     ClearBlock();
-                    using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, table.Qualified)))
+                    using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, listSql, table.Qualified)))
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            rows.Add(ReadRecordSummary(reader, table.PhotoColumn));
+                            rows.Add(ReadRecordSummary(reader, table));
                         }
                     }
                 }
@@ -187,7 +187,7 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
-        public RfidRecordsResult SetStatus(decimal id, string status)
+        public RfidRecordsResult SetStatus(decimal id, string status, string remarks)
         {
             if (id <= 0)
             {
@@ -198,6 +198,17 @@ namespace RFID_Marketing_Form.Data
             if (status == null)
             {
                 return RfidRecordsResult.Fail("Status must be Active or Inactive.");
+            }
+
+            if (string.IsNullOrWhiteSpace(remarks))
+            {
+                return RfidRecordsResult.Fail("Please enter remarks for this status change.");
+            }
+
+            remarks = remarks.Trim();
+            if (remarks.Length > 500)
+            {
+                remarks = remarks.Substring(0, 500);
             }
 
             string cs;
@@ -215,7 +226,13 @@ namespace RFID_Marketing_Form.Data
             try
             {
                 var table = ResolveTable(cs);
-                const string sql = "UPDATE {0} SET STATUS = :status WHERE ID = :id";
+                if (!table.HasStatusRemarks)
+                {
+                    return RfidRecordsResult.Fail(
+                        "STATUS_REMARKS column is missing on the RFID table. Run Sql/Add_Status_Remarks_Column.sql.");
+                }
+
+                const string sql = "UPDATE {0} SET STATUS = :status, STATUS_REMARKS = :remarks WHERE ID = :id";
                 using (var conn = new OracleConnection(cs))
                 {
                     conn.Open();
@@ -223,6 +240,7 @@ namespace RFID_Marketing_Form.Data
                     using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, table.Qualified)))
                     {
                         AddVarchar(cmd, "status", status, 20);
+                        AddVarchar(cmd, "remarks", remarks, 500);
                         AddNumber(cmd, "id", id);
                         int rows = cmd.ExecuteNonQuery();
                         if (!IsSuccessfulUpdate(rows))
@@ -236,7 +254,8 @@ namespace RFID_Marketing_Form.Data
                 {
                     Ok = true,
                     TableName = table.Qualified,
-                    Status = status
+                    Status = status,
+                    StatusRemarks = remarks
                 };
             }
             catch (Exception ex)
@@ -442,6 +461,117 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
+        public RfidRecordsResult UpdatePrintAssignment(decimal id, string issuedBy, string printDateText, string rfidNumber)
+        {
+            if (id <= 0)
+            {
+                return RfidRecordsResult.Fail("A valid record ID is required.");
+            }
+
+            rfidNumber = TrimMax(rfidNumber, 50);
+            if (!string.IsNullOrEmpty(rfidNumber) &&
+                (rfidNumber.Length < 4 || !RfidValidator.IsRfid(rfidNumber)))
+            {
+                return RfidRecordsResult.Fail("RFID number must be 4 to 50 characters: letters, numbers, spaces, hyphens, or colons.");
+            }
+
+            issuedBy = TrimMax(issuedBy, 50);
+            if (!string.IsNullOrEmpty(issuedBy) && !RfidValidator.IsPersonName(issuedBy))
+            {
+                return RfidRecordsResult.Fail("Issued by must be 1 to 50 characters: letters, numbers, spaces, and . ' -");
+            }
+
+            DateTime? printDate = null;
+            if (!string.IsNullOrWhiteSpace(printDateText))
+            {
+                printDate = TryParseOptionalDate(printDateText);
+                if (!printDate.HasValue)
+                {
+                    return RfidRecordsResult.Fail("Print date is not a valid date.");
+                }
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return RfidRecordsResult.Fail(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return RfidRecordsResult.Fail(blockedMessage);
+            }
+
+            try
+            {
+                InvalidateTableCache();
+                var table = ResolveTable(cs);
+                var existing = GetRecord(id);
+                if (existing == null || !existing.Ok || existing.Record == null)
+                {
+                    return RfidRecordsResult.Fail("Record not found.");
+                }
+
+                if (printDate.HasValue && !string.IsNullOrWhiteSpace(existing.Record.IssueDate))
+                {
+                    DateTime issueDate;
+                    if (DateTime.TryParse(existing.Record.IssueDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out issueDate) ||
+                        DateTime.TryParse(existing.Record.IssueDate, CultureInfo.GetCultureInfo("en-GB"), DateTimeStyles.None, out issueDate))
+                    {
+                        if (printDate.Value.Date < issueDate.Date)
+                        {
+                            return RfidRecordsResult.Fail("Print date cannot be before the issue date.");
+                        }
+                    }
+                }
+
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+
+                    if (!string.IsNullOrEmpty(rfidNumber))
+                    {
+                        using (var dupCmd = Command(conn, null,
+                            "SELECT 1 FROM " + table.Qualified +
+                            " WHERE UPPER(TRIM(RFID_NUMBER)) = UPPER(TRIM(:rfid)) AND ID <> :id AND ROWNUM = 1"))
+                        {
+                            AddVarchar(dupCmd, "rfid", rfidNumber, 50);
+                            AddNumber(dupCmd, "id", id);
+                            var dup = dupCmd.ExecuteScalar();
+                            if (dup != null && dup != DBNull.Value)
+                            {
+                                return RfidRecordsResult.Fail("This RFID number is already on file. Use a different card number.");
+                            }
+                        }
+                    }
+
+                    const string sql = "UPDATE {0} SET ISSUED_BY = :issued_by, PRINT_DATE = :print_date, RFID_NUMBER = :rfid_number WHERE ID = :id";
+                    using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, table.Qualified)))
+                    {
+                        AddVarchar(cmd, "issued_by", NullIfEmpty(issuedBy), 50);
+                        AddDate(cmd, "print_date", printDate);
+                        AddVarchar(cmd, "rfid_number", NullIfEmpty(rfidNumber), 50);
+                        AddNumber(cmd, "id", id);
+                        int rows = cmd.ExecuteNonQuery();
+                        if (!IsSuccessfulUpdate(rows))
+                        {
+                            return RfidRecordsResult.Fail("Record not found or assignment was not updated.");
+                        }
+                    }
+                }
+
+                return GetRecord(id);
+            }
+            catch (Exception ex)
+            {
+                var described = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, described);
+                return RfidRecordsResult.Fail(described);
+            }
+        }
+
         private static bool IsSuccessfulUpdate(int rowsAffected)
         {
             // Oracle ODP.NET often returns -1 when row count is unknown but the statement succeeded.
@@ -499,6 +629,193 @@ namespace RFID_Marketing_Form.Data
             }
 
             return null;
+        }
+
+        public bool EmployeeRecordExists(string empId)
+        {
+            if (string.IsNullOrWhiteSpace(empId))
+            {
+                return false;
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing) || IsBlocked(cs))
+            {
+                return false;
+            }
+
+            try
+            {
+                var table = ResolveTable(cs);
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    using (var cmd = Command(conn, null, "SELECT 1 FROM " + table.Qualified + " WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) AND ROWNUM = 1"))
+                    {
+                        AddVarchar(cmd, "emp", empId.Trim(), 20);
+                        return cmd.ExecuteScalar() != null;
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public SaveResult SaveFamilyCard(FamilyCardInput input)
+        {
+            var issues = FamilyCardValidator.Validate(input);
+            if (issues.Count > 0)
+            {
+                return SaveResult.FromIssues("validation", "Some fields need attention", issues);
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return ErrorResult(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return ErrorResult(blockedMessage);
+            }
+
+            if (!EmployeeRecordExists(input.EmpId))
+            {
+                return SaveResult.FromIssues(
+                    "validation",
+                    "Some fields need attention",
+                    new List<FieldIssue>
+                    {
+                        new FieldIssue
+                        {
+                            Key = "emp",
+                            Message = "Employee ID was not found on the employee RFID assignment table. Create the employee record first."
+                        }
+                    });
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    using (var tx = conn.BeginTransaction())
+                    {
+                        if (!string.IsNullOrWhiteSpace(input.RfidNumber))
+                        {
+                            using (var dup = Command(conn, tx, "SELECT 1 FROM " + familyTable + " WHERE UPPER(TRIM(RFID_NUMBER)) = UPPER(TRIM(:rfid)) AND ROWNUM = 1"))
+                            {
+                                AddVarchar(dup, "rfid", input.RfidNumber, 50);
+                                if (dup.ExecuteScalar() != null)
+                                {
+                                    return SaveResult.FromIssues(
+                                        "validation",
+                                        "Some fields need attention",
+                                        new List<FieldIssue> { new FieldIssue { Key = "rfid", Message = "This RFID number is already assigned to a family card." } });
+                                }
+                            }
+                        }
+
+                        decimal dependentId;
+                        using (var depCmd = Command(conn, tx, "SELECT NVL(MAX(DEPENDENT_ID), 0) + 1 FROM " + familyTable + " WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp))"))
+                        {
+                            AddVarchar(depCmd, "emp", input.EmpId, 20);
+                            dependentId = ReadDecimal(depCmd.ExecuteScalar());
+                        }
+
+                        input.DependentId = dependentId;
+                        input.CardId = input.EmpId.Trim() + "-" + dependentId.ToString(CultureInfo.InvariantCulture);
+
+                        decimal newId;
+                        using (var idCmd = Command(conn, tx, "SELECT NVL(MAX(ID), 0) + 1 FROM " + familyTable))
+                        {
+                            newId = ReadDecimal(idCmd.ExecuteScalar());
+                        }
+
+                        const string insertSql =
+                            "INSERT INTO {0} (ID, EMP_ID, DEPENDENT_ID, CARD_ID, CARD_NAME, RELATIONSHIP, CNIC, RFID_NUMBER, " +
+                            "ISSUE_DATE, EXPIRY_DATE, ISSUED_BY, PRINT_DATE, CREATED_DATE, STATUS, IS_APPROVED, APPROVED_DATE, APPROVE_ID, " +
+                            "HOD_REMARKS, IS_FORWARD_HOD, FORWARD_HOD_BY, FORWARD_HOD_ON, REQUESTER_REMARKS, IMAGE_PATH) VALUES (" +
+                            ":id, :emp_id, :dependent_id, :card_id, :card_name, :relationship, :cnic, :rfid_number, " +
+                            ":issue_date, :expiry_date, :issued_by, :print_date, :created_date, :status, :is_approved, :approved_date, :approve_id, " +
+                            ":hod_remarks, :is_forward_hod, :forward_hod_by, :forward_hod_on, :requester_remarks, :image_path)";
+
+                        using (var cmd = Command(conn, tx, string.Format(CultureInfo.InvariantCulture, insertSql, familyTable)))
+                        {
+                            AddNumber(cmd, "id", newId);
+                            AddVarchar(cmd, "emp_id", input.EmpId, 20);
+                            AddNumber(cmd, "dependent_id", dependentId);
+                            AddVarchar(cmd, "card_id", input.CardId, 30);
+                            AddVarchar(cmd, "card_name", input.CardName, 100);
+                            AddVarchar(cmd, "relationship", input.Relationship, 50);
+                            AddVarchar(cmd, "cnic", NullIfEmpty(input.Cnic), 20);
+                            AddVarchar(cmd, "rfid_number", NullIfEmpty(input.RfidNumber), 50);
+                            AddDate(cmd, "issue_date", input.IssueDate);
+                            AddDate(cmd, "expiry_date", input.ExpiryDate);
+                            AddVarchar(cmd, "issued_by", NullIfEmpty(input.IssuedBy), 50);
+                            AddDate(cmd, "print_date", input.PrintDate);
+                            AddDate(cmd, "created_date", input.CreatedDate ?? DateTime.Now);
+                            AddVarchar(cmd, "status", input.Status, 20);
+                            AddVarchar(cmd, "is_approved", input.IsApproved == "Y" ? "Y" : "N", 1);
+                            AddDate(cmd, "approved_date", input.IsApproved == "Y" ? input.ApprovedDate : null);
+                            AddNumber(cmd, "approve_id", input.ApproveId);
+                            AddVarchar(cmd, "hod_remarks", NullIfEmpty(input.HodRemarks), 500);
+                            AddVarchar(cmd, "is_forward_hod", input.IsForwardHod == "Y" ? "Y" : "N", 1);
+                            AddVarchar(cmd, "forward_hod_by", input.IsForwardHod == "Y" ? NullIfEmpty(input.ForwardBy) : null, 100);
+                            AddDate(cmd, "forward_hod_on", input.IsForwardHod == "Y" ? input.ForwardOn : null);
+                            AddVarchar(cmd, "requester_remarks", NullIfEmpty(input.RequesterRemarks), 500);
+                            AddVarchar(cmd, "image_path", NullIfEmpty(input.PhotoPath), 500);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        tx.Commit();
+                        return new SaveResult
+                        {
+                            Success = true,
+                            Kind = "success",
+                            Title = "Family card saved",
+                            NewId = newId,
+                            TableName = familyTable,
+                            Messages = new List<string>
+                            {
+                                "Family card " + input.CardId + " was saved for employee " + input.EmpId + " (" + input.CardName + ", " + input.Relationship + ")."
+                            },
+                            Fields = new List<string>()
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var message = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, message);
+                return ErrorResult(message);
+            }
+        }
+
+        private static string ResolveFamilyTableQualified()
+        {
+            var configured = ConfigurationManager.AppSettings["EmpFamilyTableName"];
+            if (string.IsNullOrWhiteSpace(configured))
+            {
+                configured = "SPERS.EMP_FAMILY_MARKETING";
+            }
+
+            configured = configured.Trim();
+            if (configured.IndexOf('.') < 0)
+            {
+                configured = "SPERS." + configured;
+            }
+
+            return configured.ToUpperInvariant();
         }
 
         public SaveResult Save(RfidInput input)
@@ -663,13 +980,45 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
+        private static string BuildListSelect(TableRef table)
+        {
+            var cols = new List<string>
+            {
+                "ID", "EMP_ID", "RFID_NUMBER", "STATUS", "ISSUE_DATE", "ISSUED_BY", "IS_APPROVED", "CREATED_DATE"
+            };
+            if (table.HasStatusRemarks && !cols.Contains("STATUS_REMARKS"))
+            {
+                cols.Add("STATUS_REMARKS");
+            }
+
+            return "SELECT " + string.Join(", ", cols.ToArray()) + " FROM {0} ORDER BY ID DESC";
+        }
+
         private static string BuildDetailSelect(TableRef table)
         {
             var cols = new List<string>
             {
                 "ID", "EMP_ID", "RFID_NUMBER", "STATUS", "ISSUE_DATE", "EXPIRY_DATE", "ISSUED_BY", "PRINT_DATE", "CREATED_DATE",
-                "IS_APPROVED", "APPROVED_DATE", "APPROVE_ID", "HOD_REMARKS", "IS_FORWARD_HOD", "FORWARD_HOD_BY", "FORWARD_HOD_ON", "REQUESTER_REMARKS"
+                "IS_APPROVED", "APPROVED_DATE", "APPROVE_ID", "HOD_REMARKS", "REQUESTER_REMARKS"
             };
+            if (table.HasStatusRemarks && !cols.Contains("STATUS_REMARKS"))
+            {
+                cols.Add("STATUS_REMARKS");
+            }
+            if (table.HasIsForwardHod && !cols.Contains("IS_FORWARD_HOD"))
+            {
+                cols.Add("IS_FORWARD_HOD");
+            }
+
+            if (!string.IsNullOrEmpty(table.ForwardByColumn) && !cols.Contains(table.ForwardByColumn))
+            {
+                cols.Add(table.ForwardByColumn);
+            }
+
+            if (!string.IsNullOrEmpty(table.ForwardOnColumn) && !cols.Contains(table.ForwardOnColumn))
+            {
+                cols.Add(table.ForwardOnColumn);
+            }
             if (!string.IsNullOrEmpty(table.PhotoColumn) && !cols.Contains(table.PhotoColumn))
             {
                 cols.Add(table.PhotoColumn);
@@ -728,9 +1077,9 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
-        private static RfidRecord ReadRecordSummary(IDataReader reader, string photoColumn)
+        private static RfidRecord ReadRecordSummary(IDataReader reader, TableRef table)
         {
-            return new RfidRecord
+            var record = new RfidRecord
             {
                 Id = ReadDecimal(reader, "ID"),
                 EmpId = ReadString(reader, "EMP_ID"),
@@ -741,19 +1090,37 @@ namespace RFID_Marketing_Form.Data
                 IsApproved = FormatYesNo(reader, "IS_APPROVED"),
                 CreatedDate = ReadDateDisplay(reader, "CREATED_DATE")
             };
+            if (table != null && table.HasStatusRemarks)
+            {
+                record.StatusRemarks = ReadString(reader, "STATUS_REMARKS");
+            }
+
+            return record;
         }
 
         private static RfidRecord ReadRecordDetail(IDataReader reader, TableRef table)
         {
-            var record = ReadRecordSummary(reader, table.PhotoColumn);
+            var record = ReadRecordSummary(reader, table);
             record.ExpiryDate = ReadDateDisplay(reader, "EXPIRY_DATE");
             record.PrintDate = ReadDateDisplay(reader, "PRINT_DATE");
             record.ApprovedDate = ReadDateDisplay(reader, "APPROVED_DATE");
             record.ApproveId = ReadString(reader, "APPROVE_ID");
             record.HodRemarks = ReadString(reader, "HOD_REMARKS");
-            record.IsForwardHod = FormatYesNo(reader, "IS_FORWARD_HOD");
-            record.ForwardBy = ReadString(reader, "FORWARD_HOD_BY");
-            record.ForwardOn = ReadDateDisplay(reader, "FORWARD_HOD_ON");
+            if (table.HasIsForwardHod)
+            {
+                record.IsForwardHod = FormatYesNo(reader, "IS_FORWARD_HOD");
+            }
+
+            if (!string.IsNullOrEmpty(table.ForwardByColumn))
+            {
+                record.ForwardBy = ReadString(reader, table.ForwardByColumn);
+            }
+
+            if (!string.IsNullOrEmpty(table.ForwardOnColumn))
+            {
+                record.ForwardOn = ReadDateDisplay(reader, table.ForwardOnColumn);
+            }
+
             record.RequesterRemarks = ReadString(reader, "REQUESTER_REMARKS");
             if (!string.IsNullOrEmpty(table.PhotoColumn))
             {
@@ -1109,7 +1476,7 @@ namespace RFID_Marketing_Form.Data
                 }
 
                 AddVarchar(cmd, "emp_id", input.EmpId, 20);
-                AddVarchar(cmd, "rfid_number", input.RfidNumber, 50);
+                AddVarchar(cmd, "rfid_number", NullIfEmpty(input.RfidNumber), 50);
                 if (table.HasCardName)
                 {
                     AddVarchar(cmd, "card_name", NullIfEmpty(input.CardName), 100);
@@ -1152,7 +1519,7 @@ namespace RFID_Marketing_Form.Data
 
                 AddDate(cmd, "issue_date", input.IssueDate);
                 AddDate(cmd, "expiry_date", input.ExpiryDate);
-                AddVarchar(cmd, "issued_by", input.IssuedBy, 50);
+                AddVarchar(cmd, "issued_by", NullIfEmpty(input.IssuedBy), 50);
                 AddVarchar(cmd, "status", input.Status, 20);
                 AddDate(cmd, "created_date", input.CreatedDate);
                 AddVarchar(cmd, "is_approved", string.IsNullOrEmpty(input.IsApproved) ? null : input.IsApproved, 1);
@@ -1190,7 +1557,10 @@ namespace RFID_Marketing_Form.Data
             {
                 if (cachedTable != null && string.Equals(cachedConnection, cs, StringComparison.Ordinal))
                 {
-                    return cachedTable;
+                    if (cachedTable.ForwardColumnsResolved)
+                    {
+                        return cachedTable;
+                    }
                 }
             }
 
@@ -1215,6 +1585,7 @@ namespace RFID_Marketing_Form.Data
                 table.PhotoColumn = ResolvePhotoColumn(conn, table);
                 table.NameColumn = ResolveNameColumn(conn, table);
                 ResolveProfileColumns(conn, table);
+                ResolveForwardColumns(conn, table);
                 lock (Gate)
                 {
                     cachedTable = table;
@@ -1262,6 +1633,27 @@ namespace RFID_Marketing_Form.Data
             table.HasBloodGroup = ColumnExists(conn, table, "BLOOD_GROUP");
             table.HasCnic = ColumnExists(conn, table, "CNIC");
             table.HasEmergencyNo = ColumnExists(conn, table, "EMERGENCY_NO");
+            table.HasStatusRemarks = ColumnExists(conn, table, "STATUS_REMARKS");
+        }
+
+        private static void ResolveForwardColumns(OracleConnection conn, TableRef table)
+        {
+            table.HasIsForwardHod = ColumnExists(conn, table, "IS_FORWARD_HOD");
+            if (ColumnExists(conn, table, "FORWARD_HOD_BY"))
+            {
+                table.ForwardByColumn = "FORWARD_HOD_BY";
+            }
+
+            if (ColumnExists(conn, table, "FORWARD_HOD_ON"))
+            {
+                table.ForwardOnColumn = "FORWARD_HOD_ON";
+            }
+            else if (ColumnExists(conn, table, "FORWARD_ON"))
+            {
+                table.ForwardOnColumn = "FORWARD_ON";
+            }
+
+            table.ForwardColumnsResolved = true;
         }
 
         private static string ResolveNameColumn(OracleConnection conn, TableRef table)
@@ -1571,6 +1963,11 @@ namespace RFID_Marketing_Form.Data
             public bool HasBloodGroup { get; set; }
             public bool HasCnic { get; set; }
             public bool HasEmergencyNo { get; set; }
+            public bool HasStatusRemarks { get; set; }
+            public bool HasIsForwardHod { get; set; }
+            public string ForwardByColumn { get; set; }
+            public string ForwardOnColumn { get; set; }
+            public bool ForwardColumnsResolved { get; set; }
         }
     }
 

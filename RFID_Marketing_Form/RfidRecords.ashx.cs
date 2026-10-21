@@ -1,20 +1,35 @@
 using System.Globalization;
 using System.Web;
 using System.Web.Script.Serialization;
+using System.Web.SessionState;
 using RFID_Marketing_Form.Data;
 
 namespace RFID_Marketing_Form
 {
-    public class RfidRecords : IHttpHandler
+    public class RfidRecords : IHttpHandler, IRequiresSessionState
     {
         public void ProcessRequest(HttpContext context)
         {
-            context.Response.ContentType = "application/json";
+            context.Response.ContentType = "application/json; charset=utf-8";
             context.Response.Cache.SetCacheability(HttpCacheability.NoCache);
 
-            var action = (context.Request.QueryString["action"] ?? context.Request.Form["action"] ?? "list").Trim().ToLowerInvariant();
-            var repo = new RfidRepository();
+            if (context.Session != null)
+            {
+                MarketingAuthContext.EnsurePermissionsLoaded(context);
+            }
+
             RfidRecordsResult result;
+            try
+            {
+                var action = (context.Request.QueryString["action"] ?? context.Request.Form["action"] ?? "list").Trim().ToLowerInvariant();
+                if (!TryAuthorize(context, action, out result))
+                {
+                    context.Response.StatusCode = result != null && result.Error != null && result.Error.IndexOf("Sign in", System.StringComparison.OrdinalIgnoreCase) >= 0 ? 401 : 403;
+                    WriteJson(context, result);
+                    return;
+                }
+
+                var repo = new RfidRepository();
 
             if (action == "detail")
             {
@@ -40,7 +55,8 @@ namespace RFID_Marketing_Form
                 }
                 else
                 {
-                    result = repo.SetStatus(id, status);
+                    var remarks = (context.Request["remarks"] ?? context.Request.QueryString["remarks"] ?? string.Empty).Trim();
+                    result = repo.SetStatus(id, status, remarks);
                 }
             }
             else if (action == "updateprofile")
@@ -66,12 +82,105 @@ namespace RFID_Marketing_Form
                         context.Request["photoPath"]);
                 }
             }
-            else
+            else if (action == "updateprintassignment")
             {
-                result = repo.ListRecords();
+                var idText = (context.Request["id"] ?? string.Empty).Trim();
+                decimal id;
+                if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0)
+                {
+                    result = RfidRecordsResult.Fail("A valid record ID is required.");
+                }
+                else
+                {
+                    result = repo.UpdatePrintAssignment(
+                        id,
+                        context.Request["issuedBy"],
+                        context.Request["printDate"],
+                        context.Request["rfidNumber"]);
+                }
             }
+                else
+                {
+                    result = repo.ListRecords();
+                }
 
-            context.Response.Write(new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(result));
+                WriteJson(context, result);
+            }
+            catch (System.Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                WriteJson(context, RfidRecordsResult.Fail(ex.Message));
+            }
+        }
+
+        private static void WriteJson(HttpContext context, RfidRecordsResult result)
+        {
+            context.Response.Write(new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(result ?? RfidRecordsResult.Fail("Unexpected empty response.")));
+        }
+
+        private static bool TryAuthorize(HttpContext context, string action, out RfidRecordsResult denied)
+        {
+            denied = null;
+            string err;
+
+            switch (action)
+            {
+                case "detail":
+                    if (!MarketingAuthContext.TryRequireAnyPermission(
+                        context,
+                        new[]
+                        {
+                            AppPermissionCodes.ActionRecordsView,
+                            AppPermissionCodes.ActionRecordsEdit,
+                            AppPermissionCodes.ActionRecordsPrint
+                        },
+                        out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                case "setstatus":
+                    if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ActionRecordsStatus, out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                case "updateprofile":
+                    if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ActionRecordsEdit, out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                case "updateprintassignment":
+                    if (!MarketingAuthContext.TryRequireAnyPermission(
+                        context,
+                        new[]
+                        {
+                            AppPermissionCodes.ActionRecordsPrint,
+                            AppPermissionCodes.ActionRecordsEdit
+                        },
+                        out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                default:
+                    if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ActionRecordsList, out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+            }
         }
 
         public bool IsReusable

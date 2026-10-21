@@ -52,8 +52,15 @@ namespace RFID_Marketing_Form.Data
             input.ApproveId = TryParseId(input.ApproveIdText);
             input.IssueDate = ParseDate(input.IssueDateText, "issue", "Issue date", issues);
             input.ExpiryDate = ParseDate(input.ExpiryDateText, "expiry", "Expiry date", issues);
-            input.PrintDate = ParseDate(input.PrintDateText, "print", "Print date", issues);
-            input.CreatedDate = ParseDate(input.CreatedDateText, "created", "Created date", issues);
+            input.PrintDate = ParseOptionalDate(input.PrintDateText, "print", "Print date", issues);
+            if (Clean(input.CreatedDateText).Length == 0)
+            {
+                input.CreatedDate = DateTime.Now;
+            }
+            else
+            {
+                input.CreatedDate = ParseDate(input.CreatedDateText, "created", "Created date", issues);
+            }
             input.ApprovedDate = ParseDate(input.ApprovedDateText, "approvedDate", "Approved date", issues);
             input.ForwardOn = ParseDate(input.ForwardOnText, "forwardOn", "Forwarded on", issues);
             input.JoiningDate = ParseOptionalDate(input.JoiningDateText, "joining", "Joining date", issues);
@@ -84,11 +91,8 @@ namespace RFID_Marketing_Form.Data
             LimitOptionalText(issues, "cnic", "CNIC", input.Cnic, 20);
             LimitOptionalText(issues, "emergencyNo", "Emergency #", input.EmergencyNo, 30);
 
-            if (input.RfidNumber.Length == 0)
-            {
-                issues.Add(Issue("rfid", "RFID number is required."));
-            }
-            else if (input.RfidNumber.Length < 4 || input.RfidNumber.Length > 50 || !IsRfid(input.RfidNumber))
+            if (input.RfidNumber.Length > 0 &&
+                (input.RfidNumber.Length < 4 || input.RfidNumber.Length > 50 || !IsRfid(input.RfidNumber)))
             {
                 issues.Add(Issue("rfid", "RFID number must be 4 to 50 characters: letters, numbers, spaces, hyphens, or colons."));
             }
@@ -106,18 +110,9 @@ namespace RFID_Marketing_Form.Data
                 input.Status = CanonicalStatus(input.Status);
             }
 
-            if (input.IssuedBy.Length == 0)
-            {
-                issues.Add(Issue("issuedBy", "Issued by is required."));
-            }
-            else if (input.IssuedBy.Length > 50 || !IsPersonName(input.IssuedBy))
+            if (input.IssuedBy.Length > 0 && (input.IssuedBy.Length > 50 || !IsPersonName(input.IssuedBy)))
             {
                 issues.Add(Issue("issuedBy", "Issued by must be 1 to 50 characters: letters, numbers, spaces, and . ' -"));
-            }
-
-            if (!input.CreatedDate.HasValue && Clean(input.CreatedDateText).Length == 0)
-            {
-                issues.Add(Issue("created", "Created date is required."));
             }
 
             if (!input.IssueDate.HasValue && Clean(input.IssueDateText).Length == 0)
@@ -323,7 +318,7 @@ namespace RFID_Marketing_Form.Data
             return true;
         }
 
-        private static bool IsRfid(string value)
+        public static bool IsRfid(string value)
         {
             for (int i = 0; i < value.Length; i++)
             {
@@ -337,7 +332,7 @@ namespace RFID_Marketing_Form.Data
             return true;
         }
 
-        private static bool IsPersonName(string value)
+        public static bool IsPersonName(string value)
         {
             for (int i = 0; i < value.Length; i++)
             {

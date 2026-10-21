@@ -1,0 +1,315 @@
+/* Shared Bahria Town marketing app sidebar + shell layout */
+
+:root {
+    --mkt-teal-sidebar: #004646;
+    --mkt-teal-active: rgba(255, 255, 255, 0.12);
+}
+
+form#form1.marketing-shell {
+    display: flex !important;
+    flex-direction: row !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+.marketing-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.marketing-main > .topbar {
+    flex-shrink: 0;
+}
+
+.marketing-main > main,
+.marketing-main > .shell,
+.marketing-main > .records-main,
+.marketing-main > .admin-main,
+.marketing-main > .rp-main {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+html.records-root form#form1.marketing-shell {
+    display: flex !important;
+    flex-direction: row !important;
+    height: 100dvh !important;
+    min-height: 100vh;
+    overflow: hidden !important;
+}
+
+html.records-root.marketing-app,
+html.records-root.marketing-app body.records-page {
+    overflow: hidden !important;
+    height: 100dvh !important;
+}
+
+html.records-root .marketing-main {
+    overflow-x: hidden;
+    overflow-y: auto !important;
+}
+
+body.marketing-app form#form1.marketing-shell .shell {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+body.admin-page form#form1.admin-form.marketing-shell {
+    flex-direction: row !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+}
+
+body.admin-page.marketing-app {
+    overflow: hidden !important;
+    height: 100dvh !important;
+}
+
+body.admin-page .marketing-main {
+    overflow-x: hidden;
+    overflow-y: auto !important;
+}
+
+.rp-sidebar {
+    width: 248px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, var(--mkt-teal-sidebar) 0%, #002f2f 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0 16px;
+    overflow: hidden;
+    z-index: 2;
+}
+
+.rp-sidebar__logo {
+    width: 50%;
+    margin: 0 auto 20px;
+    padding: 0 0 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.rp-sidebar__logo img {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    opacity: 0.98;
+}
+
+.rp-sidebar__logo-fallback {
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+}
+
+.rp-nav {
+    flex: 1 1 auto;
+    padding: 8px 12px;
+    overflow-y: auto;
+}
+
+.rp-sidebar a,
+.rp-nav a {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 14px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.92);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: left;
+    transition: background 0.15s ease;
+}
+
+.rp-nav a svg {
+    margin-top: 2px;
+}
+
+.rp-sidebar a:visited {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.rp-sidebar a:hover,
+.rp-nav a:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.rp-nav a.is-active {
+    background: rgba(0, 0, 0, 0.22);
+    color: #fff;
+    font-weight: 700;
+}
+
+.rp-sidebar a svg,
+.rp-nav a svg {
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+.rp-sidebar__foot.rp-profile-wrap {
+    position: relative;
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rp-profile-trigger {
+    width: 100%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition: background 0.15s ease;
+}
+
+.rp-profile-trigger:hover,
+.rp-profile-trigger[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.rp-profile-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.rp-profile-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rp-profile-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rp-profile-role {
+    font-size: 11px;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rp-profile-chevron {
+    flex-shrink: 0;
+    opacity: 0.85;
+    transition: transform 0.15s ease;
+}
+
+.rp-profile-trigger[aria-expanded="true"] .rp-profile-chevron {
+    transform: rotate(180deg);
+}
+
+.rp-profile-menu {
+    display: none;
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(100% + 8px);
+    background: #fff;
+    color: var(--ink, #1e2d2d);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(15, 35, 35, 0.22);
+    border: 1px solid rgba(15, 35, 35, 0.08);
+    overflow: hidden;
+    z-index: 30;
+}
+
+.rp-profile-menu.is-open {
+    display: block;
+}
+
+.rp-profile-menu__head {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e8ecec;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rp-profile-menu__head strong {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rp-profile-menu__head span {
+    font-size: 11px;
+    color: #6b7b7b;
+}
+
+.rp-profile-menu__logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    color: #1e2d2d !important;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.rp-profile-menu__logout:hover {
+    background: #f3f6f6;
+}
+
+.rp-profile-menu__logout:visited {
+    color: #1e2d2d !important;
+}
+
+@media (max-width: 960px) {
+    form#form1.marketing-shell {
+        flex-direction: column !important;
+        overflow: auto !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+    }
+
+    .rp-sidebar {
+        width: 100%;
+    }
+
+    .rp-sidebar__logo {
+        width: min(50%, 280px);
+    }
+
+    .marketing-main {
+        overflow: visible;
+    }
+}

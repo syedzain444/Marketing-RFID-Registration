@@ -85,6 +85,7 @@ namespace RFID_Marketing_Form.Data
         public string EmergencyNo { get; set; }
         public string RfidNumber { get; set; }
         public string Status { get; set; }
+        public string StatusRemarks { get; set; }
         public string IssueDate { get; set; }
         public string ExpiryDate { get; set; }
         public string IssuedBy { get; set; }
@@ -109,11 +110,46 @@ namespace RFID_Marketing_Form.Data
         public List<RfidRecord> Records { get; set; }
         public RfidRecord Record { get; set; }
         public string Status { get; set; }
+        public string StatusRemarks { get; set; }
 
         public static RfidRecordsResult Fail(string message)
         {
             return new RfidRecordsResult { Ok = false, Error = message ?? string.Empty, Records = new List<RfidRecord>() };
         }
+    }
+
+    public class FamilyCardInput
+    {
+        public decimal? Id { get; set; }
+        public string EmpId { get; set; }
+        public decimal DependentId { get; set; }
+        public string CardId { get; set; }
+        public string CardName { get; set; }
+        public string Relationship { get; set; }
+        public string Cnic { get; set; }
+        public string RfidNumber { get; set; }
+        public string Status { get; set; }
+        public string IssueDateText { get; set; }
+        public string ExpiryDateText { get; set; }
+        public string IssuedBy { get; set; }
+        public string PrintDateText { get; set; }
+        public string IsApproved { get; set; }
+        public string ApprovedDateText { get; set; }
+        public string ApproveIdText { get; set; }
+        public string HodRemarks { get; set; }
+        public string IsForwardHod { get; set; }
+        public string ForwardBy { get; set; }
+        public string ForwardOnText { get; set; }
+        public string RequesterRemarks { get; set; }
+        public string PhotoPath { get; set; }
+
+        public DateTime? IssueDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+        public DateTime? PrintDate { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public DateTime? ApprovedDate { get; set; }
+        public DateTime? ForwardOn { get; set; }
+        public decimal? ApproveId { get; set; }
     }
 
     public class SaveResult

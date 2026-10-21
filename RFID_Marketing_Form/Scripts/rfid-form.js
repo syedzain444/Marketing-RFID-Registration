@@ -5,6 +5,11 @@ var RfidForm = (function () {
     var photoObjectUrl = null;
     var captchaKey = null;
     var pendingSaveBtn = null;
+    var config = {
+        ajaxSaveUrl: null,
+        onSaveSuccess: null
+    };
+    var activeFormTab = "employee";
 
     function val(id) {
         var el = document.getElementById(id);
@@ -161,38 +166,133 @@ var RfidForm = (function () {
         return new Date(d.getFullYear(), d.getMonth(), d.getDate());
     }
 
+    function isFamilyMode() {
+        var chk = document.getElementById("chkFamilyCard");
+        return !!(chk && chk.checked);
+    }
+
+    function getHeroPreviewTab() {
+        if (!isFamilyMode()) return "employee";
+        return activeFormTab;
+    }
+
+    function setFormTab(tab, animate) {
+        if (animate === undefined) animate = true;
+        tab = tab === "family" ? "family" : "employee";
+        if (!isFamilyMode()) tab = "employee";
+        activeFormTab = tab;
+
+        var track = document.getElementById("nrPanelsTrack");
+        var viewport = document.querySelector(".nr-panels-viewport");
+        if (track) {
+            track.classList.toggle("is-tab-family", tab === "family");
+            if (!animate) {
+                track.style.transition = "none";
+                void track.offsetWidth;
+                track.style.transition = "";
+            }
+        }
+        if (viewport) viewport.classList.toggle("is-tab-family", tab === "family");
+
+        var tabEmp = document.getElementById("nrTabEmployee");
+        var tabFam = document.getElementById("nrTabFamily");
+        if (tabEmp) {
+            tabEmp.classList.toggle("is-active", tab === "employee");
+            tabEmp.setAttribute("aria-selected", tab === "employee" ? "true" : "false");
+        }
+        if (tabFam) {
+            tabFam.classList.toggle("is-active", tab === "family");
+            tabFam.setAttribute("aria-selected", tab === "family" ? "true" : "false");
+        }
+
+        var root = document.querySelector(".new-request-form");
+        if (root) {
+            root.classList.toggle("is-tab-employee", tab === "employee");
+            root.classList.toggle("is-tab-family", tab === "family");
+        }
+
+        var panelEmp = document.getElementById("nrPanelEmployee");
+        var panelFam = document.getElementById("nrPanelFamily");
+        if (panelFam) panelFam.hidden = !isFamilyMode();
+        if (panelEmp) {
+            panelEmp.setAttribute("aria-hidden", isFamilyMode() && tab === "family" ? "true" : "false");
+        }
+        if (panelFam) {
+            panelFam.setAttribute("aria-hidden", !isFamilyMode() || tab === "employee" ? "true" : "false");
+        }
+
+        updateFamilyCardIdPreview();
+        refreshNewRequestHero();
+        refreshMeter();
+    }
+
+    function syncFamilyMode() {
+        var on = isFamilyMode();
+        var root = document.querySelector(".new-request-form");
+        if (root) root.classList.toggle("is-family-mode", on);
+
+        var tabs = document.getElementById("nrFormTabs");
+        if (tabs) tabs.classList.toggle("is-hidden", !on);
+        var panelFam = document.getElementById("nrPanelFamily");
+        if (panelFam) panelFam.hidden = !on;
+
+        var swText = document.querySelector(".family-switch__text");
+        if (swText) swText.textContent = on ? (swText.getAttribute("data-on") || "On") : (swText.getAttribute("data-off") || "Off");
+        var swLabel = document.querySelector(".family-switch");
+        if (swLabel) swLabel.classList.toggle("is-on", on);
+
+        if (on) {
+            setFormTab(activeFormTab, false);
+        } else {
+            activeFormTab = "employee";
+            setFormTab("employee", false);
+            var root = document.querySelector(".new-request-form");
+            if (root) {
+                root.classList.remove("is-tab-family");
+                root.classList.add("is-tab-employee");
+            }
+        }
+    }
+
+    function onFamilyToggleChange() {
+        var on = isFamilyMode();
+        syncFamilyMode();
+        if (on) setFormTab("family", true);
+    }
+
+    function updateFamilyCardIdPreview() {
+        var preview = document.getElementById("txtFamilyCardIdPreview");
+        if (!preview) return;
+        var emp = val("txtEmpId");
+        preview.value = emp ? emp + "-?" : "";
+        preview.placeholder = emp ? "" : "Enter employee ID first";
+    }
+
     function localIssues() {
         var issues = [];
+        if (isFamilyMode()) {
+            return localFamilyIssues();
+        }
         var emp = val("txtEmpId");
-        var rfid = val("txtRfid");
         var status = radioValue("rblStatus");
-        var issuedBy = val("txtIssuedBy");
         var forward = radioValue("rblForward");
         var forwardBy = val("txtForwardBy");
         var approved = radioValue("rblApproved");
+        var today = startOfDay(new Date());
         var issueDate = parseIso(val("txtIssueDate"));
         var expiry = parseIso(val("txtExpiryDate"));
-        var printDate = parseIso(val("txtPrintDate"));
-        var created = parseIso(val("txtCreatedDate"));
         var approvedDate = parseIso(val("txtApprovedDate"));
+        var createdAnchor = parseIso(val("txtIssueDate"));
+        if (createdAnchor === "bad" || !createdAnchor) {
+            createdAnchor = today;
+        }
         var forwardOn = parseIso(val("txtForwardOn"));
-        var today = startOfDay(new Date());
 
         if (!emp) issues.push(issue("emp", "Employee ID is required."));
         else if (emp.length > 20 || !/^[A-Za-z0-9][A-Za-z0-9\-\/_.]*$/.test(emp)) issues.push(issue("emp", "Employee ID must be 1 to 20 characters: letters, numbers, hyphen, slash, underscore, or dot."));
 
-        if (!rfid) issues.push(issue("rfid", "RFID number is required."));
-        else if (rfid.length < 4 || rfid.length > 50 || !/^[A-Za-z0-9:\- ]+$/.test(rfid)) issues.push(issue("rfid", "RFID number must be 4 to 50 characters: letters, numbers, spaces, hyphens, or colons."));
-
         if (!status) issues.push(issue("status", "Status is required."));
         else if (status !== "Active" && status !== "Inactive") issues.push(issue("status", "Status must be Active or Inactive."));
-        if (!issuedBy) issues.push(issue("issuedBy", "Issued by is required."));
-        else if (!personOk(issuedBy, 50)) issues.push(issue("issuedBy", "Issued by must be 1 to 50 characters: letters, numbers, spaces, and . ' -"));
-
-        if (isBlank(val("txtCreatedDate"))) issues.push(issue("created", "Created date is required."));
-        else if (created === "bad") issues.push(issue("created", "Created date is not a valid date."));
-        else if (created > today || created < new Date(2000, 0, 1)) issues.push(issue("created", "Created date must be between 01 Jan 2000 and today."));
-
         if (isBlank(val("txtIssueDate"))) issues.push(issue("issue", "Issue date is required."));
         else if (issueDate === "bad") issues.push(issue("issue", "Issue date is not a valid date."));
         else {
@@ -202,13 +302,10 @@ var RfidForm = (function () {
         }
 
         if (expiry === "bad") issues.push(issue("expiry", "Expiry date is not a valid date."));
-        if (printDate === "bad") issues.push(issue("print", "Print date is not a valid date."));
         if (approvedDate === "bad") issues.push(issue("approvedDate", "Approved date is not a valid date."));
         if (forwardOn === "bad") issues.push(issue("forwardOn", "Forwarded on is not a valid date."));
 
         if (issueDate && expiry && expiry !== "bad" && issueDate !== "bad" && expiry <= issueDate) issues.push(issue("expiry", "Expiry date must be after the issue date."));
-        if (printDate && issueDate && printDate !== "bad" && issueDate !== "bad" && printDate < issueDate) issues.push(issue("print", "Print date cannot be before the issue date."));
-
         if (forward === "Y") {
             if (!forwardBy) issues.push(issue("forwardBy", "Forwarded by is required when the request goes to the HOD."));
             else if (!personOk(forwardBy, 100)) issues.push(issue("forwardBy", "Forwarded by must be 1 to 100 characters: letters, numbers, spaces, and . ' -"));
@@ -217,15 +314,59 @@ var RfidForm = (function () {
             if (forwardBy) issues.push(issue("forwardBy", "Clear Forwarded by, or set Forward to HOD to Yes."));
             if (val("txtForwardOn")) issues.push(issue("forwardOn", "Clear Forwarded on, or set Forward to HOD to Yes."));
         }
-        if (forwardOn && created && forwardOn !== "bad" && created !== "bad" && forwardOn < created) issues.push(issue("forwardOn", "Forwarded on cannot be before the created date."));
+        if (forwardOn && forwardOn !== "bad" && createdAnchor !== "bad" && forwardOn < createdAnchor) {
+            issues.push(issue("forwardOn", "Forwarded on cannot be before the issue date."));
+        }
 
         if (approved === "Y") {
             if (isBlank(val("txtApprovedDate"))) issues.push(issue("approvedDate", "Approved date is required when the request is approved."));
         } else {
             if (val("txtApprovedDate")) issues.push(issue("approvedDate", "Clear the approved date, or set Approved to Yes."));
         }
-        if (approvedDate && created && approvedDate !== "bad" && created !== "bad" && approvedDate < created) issues.push(issue("approvedDate", "Approved date cannot be before the created date."));
+        if (approvedDate && approvedDate !== "bad" && createdAnchor !== "bad" && approvedDate < createdAnchor) {
+            issues.push(issue("approvedDate", "Approved date cannot be before the issue date."));
+        }
 
+        return issues;
+    }
+
+    function localFamilyIssues() {
+        var issues = [];
+        var emp = val("txtEmpId");
+        var status = radioValue("rblStatus");
+        var forward = radioValue("rblForward");
+        var forwardBy = val("txtForwardBy");
+        var approved = radioValue("rblApproved");
+        var today = startOfDay(new Date());
+        var issueDate = parseIso(val("txtIssueDate"));
+        var expiry = parseIso(val("txtExpiryDate"));
+        var approvedDate = parseIso(val("txtApprovedDate"));
+        var forwardOn = parseIso(val("txtForwardOn"));
+        var name = val("txtFamilyCardName");
+        var rel = val("txtFamilyRelationship");
+
+        if (!emp) issues.push(issue("emp", "Employee ID is required."));
+        else if (emp.length > 20 || !/^[A-Za-z0-9][A-Za-z0-9\-\/_.]*$/.test(emp)) {
+            issues.push(issue("emp", "Employee ID must be 1 to 20 characters: letters, numbers, hyphen, slash, underscore, or dot."));
+        }
+        if (!name) issues.push(issue("familyName", "Family member name is required."));
+        if (!rel) issues.push(issue("familyRelationship", "Relationship is required."));
+        if (!status) issues.push(issue("status", "Status is required."));
+        if (isBlank(val("txtIssueDate"))) issues.push(issue("issue", "Issue date is required."));
+        else if (issueDate === "bad") issues.push(issue("issue", "Issue date is not a valid date."));
+        if (expiry === "bad") issues.push(issue("expiry", "Expiry date is not a valid date."));
+        if (issueDate && expiry && expiry !== "bad" && issueDate !== "bad" && expiry <= issueDate) {
+            issues.push(issue("expiry", "Expiry date must be after the issue date."));
+        }
+        if (forward === "Y") {
+            if (!forwardBy) issues.push(issue("forwardBy", "Forwarded by is required when the request goes to the HOD."));
+            if (isBlank(val("txtForwardOn"))) issues.push(issue("forwardOn", "Forwarded on is required when the request goes to the HOD."));
+        }
+        if (approved === "Y" && isBlank(val("txtApprovedDate"))) {
+            issues.push(issue("approvedDate", "Approved date is required when the request is approved."));
+        }
+        if (forwardOn === "bad") issues.push(issue("forwardOn", "Forwarded on is not a valid date."));
+        if (approvedDate === "bad") issues.push(issue("approvedDate", "Approved date is not a valid date."));
         return issues;
     }
 
@@ -240,7 +381,7 @@ var RfidForm = (function () {
     }
 
     function resetFormValues() {
-        var ids = ["txtEmpId", "txtRfid", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject", "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtGrade", "txtIssuedBy", "txtPrintDate", "txtApprovedDate", "txtApproveId", "txtForwardBy", "txtForwardOn", "txtHodRemarks", "txtRequesterRemarks"];
+        var ids = ["txtEmpId", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject", "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtGrade", "txtApprovedDate", "txtApproveId", "txtForwardBy", "txtForwardOn", "txtHodRemarks", "txtRequesterRemarks"];
         for (var i = 0; i < ids.length; i++) {
             var el = document.getElementById(ids[i]);
             if (el) el.value = "";
@@ -248,14 +389,20 @@ var RfidForm = (function () {
         var today = startOfDay(new Date());
         var iso = addMonths(today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate()), 0);
         var issue = document.getElementById("txtIssueDate");
-        var created = document.getElementById("txtCreatedDate");
         var expiry = document.getElementById("txtExpiryDate");
         if (issue) issue.value = iso;
-        if (created) created.value = iso;
         if (expiry) expiry.value = addMonths(iso, 12);
         setRadio("rblStatus", "Active");
         setRadio("rblForward", "N");
         setRadio("rblApproved", "");
+        var famChk = document.getElementById("chkFamilyCard");
+        if (famChk) famChk.checked = false;
+        activeFormTab = "employee";
+        ["txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyRfidNumber", "txtFamilyCardIdPreview"].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.value = "";
+        });
+        syncFamilyMode();
         revokePhotoObjectUrl();
         var pick = document.getElementById("filePhotoPick");
         if (pick) pick.value = "";
@@ -279,6 +426,9 @@ var RfidForm = (function () {
         var title = payload.title || (saved ? "Saved" : "Some fields need attention");
         showSweetAlert(kind, title, payload.messages || []).then(function () {
             if (payload.reset && saved) resetFormValues();
+            if (saved && typeof config.onSaveSuccess === "function") {
+                config.onSaveSuccess(payload);
+            }
         });
     }
 
@@ -303,6 +453,67 @@ var RfidForm = (function () {
         el.textContent = t ? t : "—";
     }
 
+    function refreshNewRequestHero() {
+        var titleEl = document.getElementById("newRequestHeroTitle");
+        var subEl = document.getElementById("newRequestHeroSub");
+        var chipsEl = document.getElementById("newRequestHeroChips");
+        if (!titleEl && !subEl && !chipsEl) return;
+
+        var emp = val("txtEmpId");
+        var name = val("txtCardName");
+        var previewTab = getHeroPreviewTab();
+        var eyebrowEl = document.getElementById("newRequestHeroEyebrow");
+        if (eyebrowEl) {
+            if (!isFamilyMode()) eyebrowEl.textContent = "New RFID card request";
+            else if (previewTab === "family") eyebrowEl.textContent = "Employee family card";
+            else eyebrowEl.textContent = "Employee card · family request";
+        }
+
+        var displayName = previewTab === "family" ? val("txtFamilyCardName") : name;
+        var rel = val("txtFamilyRelationship");
+        if (titleEl) {
+            if (previewTab === "family") {
+                titleEl.textContent = displayName || "Family member";
+            } else {
+                titleEl.textContent = name || "New assignment";
+            }
+        }
+        if (subEl) {
+            if (previewTab === "family") {
+                var relLabel = rel
+                    ? rel.charAt(0) + rel.slice(1).toLowerCase().replace(/_/g, " ")
+                    : "Relationship —";
+                subEl.innerHTML = emp
+                    ? relLabel + ' · Employee <span class="rfid-mono">' + escapeHtml(emp) + "</span>"
+                    : relLabel;
+            } else {
+                subEl.innerHTML = emp
+                    ? 'Employee ID <span class="rfid-mono">' + escapeHtml(emp) + "</span>"
+                    : "Employee ID —";
+            }
+        }
+        if (chipsEl) {
+            var status = radioValue("rblStatus") || "Active";
+            var approved = radioValue("rblApproved");
+            var statusCls = status.toLowerCase() === "active" ? "badge badge--active" : "badge badge--muted";
+            var apprText = approved === "Y" ? "Yes" : approved === "N" ? "No" : "Not set";
+            var apprCls = approved === "Y" ? "badge badge--yes" : "badge badge--muted";
+            var rfid = previewTab === "family" ? val("txtFamilyRfidNumber") : "—";
+            var cardId = val("txtFamilyCardIdPreview");
+            var tabBadge = isFamilyMode()
+                ? '<span class="badge badge--muted">' + (previewTab === "family" ? "Family tab" : "Employee tab") + "</span>"
+                : "";
+            chipsEl.innerHTML =
+                tabBadge +
+                '<span class="' + statusCls + '">' + escapeHtml(status) + "</span>" +
+                '<span class="' + apprCls + '">' + escapeHtml(apprText) + "</span>" +
+                (previewTab === "family" && cardId
+                    ? '<span class="badge badge--muted">Card <span class="rfid-mono">' + escapeHtml(cardId) + "</span></span>"
+                    : "") +
+                '<span class="badge badge--muted">RFID <span class="rfid-mono">' + escapeHtml(rfid || "—") + "</span></span>";
+        }
+    }
+
     function refreshPreview() {
         setPreviewLabel("lblEmpID", val("txtEmpId"));
         setPreviewLabel("lblName", val("txtCardName"));
@@ -315,6 +526,8 @@ var RfidForm = (function () {
         setPreviewLabel("lblCnic", val("txtCnic"));
         setPreviewLabel("lblEmergencyNo", val("txtEmergencyNo"));
         setPreviewLabel("lblGradeBadge", val("txtGrade"));
+        refreshNewRequestHero();
+        updateFamilyCardIdPreview();
         updatePassPhoto();
     }
 
@@ -337,23 +550,22 @@ var RfidForm = (function () {
         if (src) {
             img.onload = function () {
                 img.classList.remove("is-hidden");
-                if (ph) ph.hidden = true;
+                img.classList.add("is-loaded");
+                if (ph) ph.classList.add("is-hidden");
             };
             img.onerror = function () {
                 img.classList.add("is-hidden");
+                img.classList.remove("is-loaded");
                 if (ph) {
-                    ph.hidden = false;
-                    ph.textContent = "Photo unavailable";
+                    ph.classList.remove("is-hidden");
                 }
             };
             img.src = src;
         } else {
             img.removeAttribute("src");
             img.classList.add("is-hidden");
-            if (ph) {
-                ph.hidden = false;
-                ph.textContent = "Photo unavailable";
-            }
+            img.classList.remove("is-loaded");
+            if (ph) ph.classList.remove("is-hidden");
         }
     }
 
@@ -383,7 +595,7 @@ var RfidForm = (function () {
         var issues = localIssues();
         var bad = {};
         for (var i = 0; i < issues.length; i++) bad[issues[i].field] = true;
-        var base = ["emp", "rfid", "status", "issue", "issuedBy"];
+        var base = ["emp", "status", "issue"];
         var ready = 0;
         for (var b = 0; b < base.length; b++) {
             var li = document.querySelector('[data-check="' + base[b] + '"]');
@@ -391,13 +603,20 @@ var RfidForm = (function () {
             if (li) li.classList.toggle("done", ok);
             if (ok) ready++;
         }
-        var extraBad = bad.expiry || bad.print || bad.forward || bad.forwardBy || bad.forwardOn || bad.approved || bad.approvedDate || bad.created;
+        var extraBad = bad.expiry || bad.forward || bad.forwardBy || bad.forwardOn || bad.approved || bad.approvedDate;
+        if (isFamilyMode()) {
+            extraBad = extraBad || bad.familyName || bad.familyRelationship;
+        }
         var extra = document.querySelector('[data-check="extra"]');
-        var extraOk = !extraBad && !bad.created && val("txtCreatedDate").length > 0;
+        var extraOk = !extraBad;
+        if (isFamilyMode() && extraOk) {
+            extraOk = val("txtFamilyCardName").length > 0 && val("txtFamilyRelationship").length > 0 && !bad.familyName && !bad.familyRelationship;
+        }
         if (extra) extra.classList.toggle("done", extraOk);
         if (extraOk) ready++;
-        var total = 6;
-        document.getElementById("meterCount").textContent = ready + " of " + total + " done";
+        var total = 4;
+        var meterCount = document.getElementById("meterCount");
+        if (meterCount) meterCount.textContent = ready + " of " + total + " done";
         var seg = document.getElementById("meterSeg");
         if (seg) {
             var parts = seg.querySelectorAll("span");
@@ -410,22 +629,30 @@ var RfidForm = (function () {
             asideBtn.disabled = ready < total;
             asideBtn.classList.toggle("is-ready", ready >= total);
         }
+        var modalSave = document.getElementById("btnNewRequestSave");
+        if (modalSave) {
+            modalSave.disabled = ready < total;
+            modalSave.classList.toggle("is-ready", ready >= total);
+        }
     }
 
     function filled(key) {
         if (key === "emp") return val("txtEmpId").length > 0;
-        if (key === "rfid") return val("txtRfid").length >= 4;
         if (key === "status") return radioValue("rblStatus").length > 0;
         if (key === "issue") return val("txtIssueDate").length > 0;
-        if (key === "issuedBy") return val("txtIssuedBy").length > 0;
+        if (key === "extra" && isFamilyMode()) {
+            return val("txtFamilyCardName").length > 0 && val("txtFamilyRelationship").length > 0;
+        }
         return false;
     }
 
     function updateCounters() {
         var remarks = document.getElementById("txtRequesterRemarks");
         var hod = document.getElementById("txtHodRemarks");
-        if (remarks) document.getElementById("remarksCount").textContent = remarks.value.length + "/500";
-        if (hod) document.getElementById("hodCount").textContent = hod.value.length + "/500";
+        var rc = document.getElementById("remarksCount");
+        var hc = document.getElementById("hodCount");
+        if (remarks && rc) rc.textContent = remarks.value.length + "/500";
+        if (hod && hc) hc.textContent = hod.value.length + "/500";
     }
 
     function setHiddenField(name, value) {
@@ -479,6 +706,68 @@ var RfidForm = (function () {
         });
     }
 
+    function buildSaveFormData() {
+        var fd = new FormData();
+        var textIds = [
+            "txtEmpId", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject",
+            "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtIssueDate", "txtExpiryDate",
+            "txtForwardBy", "txtForwardOn", "txtHodRemarks", "txtApprovedDate", "txtApproveId", "txtRequesterRemarks"
+        ];
+        for (var i = 0; i < textIds.length; i++) {
+            fd.append(textIds[i], val(textIds[i]));
+        }
+        fd.append("rblStatus", radioValue("rblStatus"));
+        fd.append("rblForward", radioValue("rblForward"));
+        fd.append("rblApproved", radioValue("rblApproved"));
+        fd.append("isFamilyCard", isFamilyMode() ? "Y" : "N");
+        fd.append("txtFamilyCardName", val("txtFamilyCardName"));
+        fd.append("txtFamilyRelationship", val("txtFamilyRelationship"));
+        fd.append("txtFamilyCnic", val("txtFamilyCnic"));
+        fd.append("txtFamilyRfidNumber", val("txtFamilyRfidNumber"));
+        var form = document.getElementById("form1");
+        var keyEl = form ? form.querySelector('input[type="hidden"][name="captchaKey"]') : null;
+        var ansEl = form ? form.querySelector('input[type="hidden"][name="captchaAnswer"]') : null;
+        fd.append("captchaKey", keyEl ? keyEl.value : "");
+        fd.append("captchaAnswer", ansEl ? ansEl.value : "");
+        var pick = document.getElementById("filePhotoPick");
+        if (pick && pick.files && pick.files[0]) {
+            fd.append("employeePhoto", pick.files[0]);
+        }
+        return fd;
+    }
+
+    function performAjaxSave() {
+        if (!config.ajaxSaveUrl) return;
+        fetch(config.ajaxSaveUrl, { method: "POST", body: buildSaveFormData(), credentials: "same-origin" })
+            .then(function (res) {
+                return res.json().catch(function () {
+                    return null;
+                });
+            })
+            .then(function (payload) {
+                if (!payload) {
+                    handleSaveResult({
+                        success: false,
+                        kind: "error",
+                        title: "Unable to save",
+                        messages: ["Unexpected response from the server."],
+                        fields: []
+                    });
+                    return;
+                }
+                handleSaveResult(payload);
+            })
+            .catch(function () {
+                handleSaveResult({
+                    success: false,
+                    kind: "error",
+                    title: "Network error",
+                    messages: ["Could not reach the save service. Check your connection and try again."],
+                    fields: []
+                });
+            });
+    }
+
     function confirmCaptchaAndSave() {
         var input = document.getElementById("captchaInput");
         var err = document.getElementById("captchaError");
@@ -493,8 +782,6 @@ var RfidForm = (function () {
         setHiddenField("captchaKey", captchaKey);
         setHiddenField("captchaAnswer", answer);
         closeCaptchaModal();
-        bypass = true;
-        var btn = pendingSaveBtn || document.getElementById("btnSave");
         if (typeof Swal !== "undefined") {
             Swal.fire({
                 title: "Saving record…",
@@ -505,7 +792,21 @@ var RfidForm = (function () {
                 }
             });
         }
+        if (config.ajaxSaveUrl) {
+            performAjaxSave();
+            return;
+        }
+        bypass = true;
+        var btn = pendingSaveBtn || document.getElementById("btnSave");
         if (btn) btn.click();
+    }
+
+    function triggerSaveFlow() {
+        submitted = true;
+        var issues = localIssues();
+        paint(issues);
+        if (issues.length) return;
+        openCaptchaModal(document.getElementById("btnSaveAside") || document.getElementById("btnSave"));
     }
 
     function addMonths(iso, months) {
@@ -549,7 +850,7 @@ var RfidForm = (function () {
     }
 
     function bind() {
-        var watch = ["txtEmpId", "txtRfid", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject", "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtGrade", "txtIssueDate", "txtExpiryDate", "txtPrintDate", "txtIssuedBy", "txtCreatedDate", "txtRequesterRemarks", "txtHodRemarks", "txtForwardBy", "txtForwardOn", "txtApprovedDate", "txtApproveId"];
+        var watch = ["txtEmpId", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject", "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtGrade", "txtIssueDate", "txtExpiryDate", "txtRequesterRemarks", "txtHodRemarks", "txtForwardBy", "txtForwardOn", "txtApprovedDate", "txtApproveId", "txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyRfidNumber"];
         for (var i = 0; i < watch.length; i++) {
             var el = document.getElementById(watch[i]);
             if (!el) continue;
@@ -567,7 +868,14 @@ var RfidForm = (function () {
                 onEdit();
             });
         }
-        document.getElementById("btnClear").addEventListener("click", clearForm);
+        var clearBtn = document.getElementById("btnClear");
+        if (clearBtn) clearBtn.addEventListener("click", clearForm);
+        var famChk = document.getElementById("chkFamilyCard");
+        if (famChk) famChk.addEventListener("change", onFamilyToggleChange);
+        var tabEmp = document.getElementById("nrTabEmployee");
+        var tabFam = document.getElementById("nrTabFamily");
+        if (tabEmp) tabEmp.addEventListener("click", function () { if (isFamilyMode()) setFormTab("employee", true); });
+        if (tabFam) tabFam.addEventListener("click", function () { if (isFamilyMode()) setFormTab("family", true); });
         var pick = document.getElementById("filePhotoPick");
         if (pick) {
             pick.addEventListener("change", function () {
@@ -613,9 +921,17 @@ var RfidForm = (function () {
         var asideSave = document.getElementById("btnSaveAside");
         if (asideSave) {
             asideSave.addEventListener("click", function () {
+                if (config.ajaxSaveUrl) {
+                    triggerSaveFlow();
+                    return;
+                }
                 var btn = document.getElementById("btnSave");
                 if (btn) btn.click();
             });
+        }
+        var modalSave = document.getElementById("btnNewRequestSave");
+        if (modalSave) {
+            modalSave.addEventListener("click", triggerSaveFlow);
         }
         var capCancel = document.getElementById("captchaCancel");
         var capBackdrop = document.getElementById("captchaBackdrop");
@@ -645,20 +961,38 @@ var RfidForm = (function () {
         if (!issues.length) submitted = false;
     }
 
+    function configure(opts) {
+        if (!opts) return;
+        if (opts.ajaxSaveUrl) config.ajaxSaveUrl = opts.ajaxSaveUrl;
+        if (opts.onSaveSuccess) config.onSaveSuccess = opts.onSaveSuccess;
+    }
+
     function init() {
         bind();
+        syncFamilyMode();
         onEdit();
         flushPendingSaveResult();
     }
 
+    function boot() {
+        if (!document.getElementById("txtEmpId")) return;
+        if (document.getElementById("newRequestModal")) return;
+        init();
+    }
+
     return {
         init: init,
+        configure: configure,
+        boot: boot,
         validateBeforeSubmit: validateBeforeSubmit,
         dismissBanner: dismissBanner,
         handleSaveResult: handleSaveResult,
-        resetFormValues: resetFormValues
+        resetFormValues: resetFormValues,
+        triggerSaveFlow: triggerSaveFlow,
+        syncFamilyMode: syncFamilyMode,
+        setFormTab: setFormTab
     };
 })();
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", RfidForm.init);
-else RfidForm.init();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", RfidForm.boot);
+else RfidForm.boot();

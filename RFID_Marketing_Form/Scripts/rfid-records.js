@@ -3,6 +3,16 @@
 
     var table = null;
     var cachedRows = [];
+    var statusChangeCtx = null;
+
+    function perms() {
+        return window.RFID_PERMISSIONS || {};
+    }
+
+    function can(key) {
+        var p = perms();
+        return p[key] === true;
+    }
 
     function esc(text) {
         if (text == null) return "";
@@ -11,6 +21,43 @@
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;");
+    }
+
+    var svgView = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>';
+    var svgEdit = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    var svgPrint = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.6"/><rect x="6" y="14" width="12" height="8" stroke="currentColor" stroke-width="1.6"/></svg>';
+    var svgMore = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="6" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="18" r="1.5" fill="currentColor"/></svg>';
+
+    function avatarColor(name) {
+        var h = 0;
+        var s = String(name || "");
+        for (var i = 0; i < s.length; i++) {
+            h = s.charCodeAt(i) + ((h << 5) - h);
+        }
+        var colors = ["#0a7a62", "#2563eb", "#004d4d", "#e8882e", "#6d28d9", "#0891b2"];
+        return colors[Math.abs(h) % colors.length];
+    }
+
+    function issuerCell(name) {
+        var n = (name || "").trim();
+        if (!n || n === "—") return "—";
+        var initial = n.charAt(0).toUpperCase();
+        return (
+            '<span class="user-chip">' +
+            '<span class="user-chip__avatar" style="background:' + avatarColor(n) + '">' + esc(initial) + "</span>" +
+            '<span class="user-chip__name">' + esc(n) + "</span></span>"
+        );
+    }
+
+    function moveRecordsDtToolbar() {
+        var toolbar = document.getElementById("recordsDtToolbar");
+        if (!toolbar || !table) return;
+        var $wrap = $("#recordsTable").closest(".dataTables_wrapper");
+        $wrap.find(".dataTables_length, .dataTables_filter").appendTo(toolbar);
+        var $input = $wrap.find(".dataTables_filter input");
+        if ($input.length) {
+            $input.attr("placeholder", "Search by name, ID or RFID tag");
+        }
     }
 
     function apiOk(payload) {
@@ -22,20 +69,34 @@
         return payload.Error || payload.error || "";
     }
 
+    function recordsApiUrl(query) {
+        return "RfidRecords.ashx" + (query ? "?" + query : "");
+    }
+
     function fetchJson(url, options) {
-        return fetch(url, options || {}).then(function (res) {
+        var opts = options || {};
+        if (!opts.credentials) {
+            opts.credentials = "same-origin";
+        }
+        return fetch(url, opts).then(function (res) {
             return res.text().then(function (text) {
-                if (!res.ok) {
-                    throw new Error("Server error (" + res.status + "). Rebuild the project and try again.");
-                }
                 if (!text || !text.trim()) {
                     throw new Error("Empty response from server.");
                 }
+                var payload;
                 try {
-                    return JSON.parse(text);
+                    payload = JSON.parse(text);
                 } catch (e) {
-                    throw new Error("Could not read server response.");
+                    if (text.indexOf("<html") >= 0 && text.indexOf("MarketingLogin") >= 0) {
+                        throw new Error("Your session expired. Sign in again and retry.");
+                    }
+                    throw new Error("Could not read server response. Rebuild the site and try again.");
                 }
+                if (!payload || payload.Ok !== true) {
+                    var msg = (payload && (payload.Error || payload.error)) || "Server error (" + res.status + ").";
+                    throw new Error(msg);
+                }
+                return payload;
             });
         });
     }
@@ -60,15 +121,18 @@
     }
 
     function printCardButtonHtml(record) {
+        if (!can("print")) {
+            return "";
+        }
         var active = isActiveStatus(record.Status);
         var id = esc(record.Id);
         if (!active) {
             return (
                 '<button type="button" class="btn-print-card is-disabled" data-id="' + id + '" disabled ' +
-                'title="Print is only available for active records">Print Card</button>'
+                'title="Print is only available for active records">' + svgPrint + " Print Card</button>"
             );
         }
-        return '<button type="button" class="btn-print-card" data-id="' + id + '">Print Card</button>';
+        return '<button type="button" class="btn-print-card" data-id="' + id + '">' + svgPrint + " Print Card</button>";
     }
 
     function setPrintButtonForRecord(id, active) {
@@ -83,7 +147,37 @@
         }
     }
 
+    function statusPillHtml(record, interactive) {
+        var active = isActiveStatus(record.Status);
+        var id = esc(record.Id);
+        var cls = "status-pill" + (active ? " status-pill--active" : "");
+        var label = active ? "Active" : "Inactive";
+        if (interactive) {
+            return (
+                '<button type="button" class="' + cls + ' status-pill-btn" data-id="' + id + '" data-active="' + (active ? "true" : "false") + '">' +
+                label +
+                "</button>"
+            );
+        }
+        return '<span class="' + cls + '">' + label + "</span>";
+    }
+
+    function refreshPillBtn(btn, active) {
+        if (!btn) return;
+        btn.setAttribute("data-active", active ? "true" : "false");
+        btn.classList.toggle("status-pill--active", active);
+        btn.textContent = active ? "Active" : "Inactive";
+        btn.setAttribute("aria-label", "Set record " + btn.getAttribute("data-id") + " " + (active ? "inactive" : "active"));
+    }
+
     function statusToggleCell(record) {
+        var dash = document.body.classList.contains("dashboard-v2");
+        if (dash) {
+            return statusPillHtml(record, can("status"));
+        }
+        if (!can("status")) {
+            return statusBadge(record.Status);
+        }
         var active = isActiveStatus(record.Status);
         var id = esc(record.Id);
         return (
@@ -101,6 +195,27 @@
         if (v === "yes") return '<span class="badge badge--yes">Yes</span>';
         if (v === "no") return '<span class="badge badge--no">No</span>';
         return '<span class="badge badge--muted">—</span>';
+    }
+
+    function statusRemarksCell(text) {
+        var t = String(text || "").trim();
+        if (!t) return '<span class="status-remarks-empty">—</span>';
+        var short = t.length > 56 ? t.slice(0, 53) + "…" : t;
+        return '<span class="status-remarks-cell" title="' + esc(t) + '">' + esc(short) + "</span>";
+    }
+
+    function findCachedRecord(id) {
+        for (var i = 0; i < cachedRows.length; i++) {
+            if (String(cachedRows[i].Id) === String(id)) return cachedRows[i];
+        }
+        return null;
+    }
+
+    function refreshTableFromCache() {
+        if (!table) return;
+        table.clear();
+        table.rows.add(renderTableRows(cachedRows));
+        table.draw(false);
     }
 
     function updateStats(rows) {
@@ -125,15 +240,24 @@
                 esc(r.EmpId),
                 '<span class="rfid-mono">' + esc(r.RfidNumber) + "</span>",
                 esc(r.IssueDate || "—"),
-                esc(r.IssuedBy || "—"),
+                issuerCell(r.IssuedBy),
                 approvedBadge(r.IsApproved),
                 esc(r.CreatedDate || "—"),
                 statusToggleCell(r),
-                '<div class="records-actions">' +
-                '<button type="button" class="btn-view" data-id="' + esc(r.Id) + '">View details</button>' +
-                '<button type="button" class="btn-edit" data-id="' + esc(r.Id) + '">Edit</button>' +
-                printCardButtonHtml(r) +
-                "</div>"
+                statusRemarksCell(r.StatusRemarks),
+                (function () {
+                    var parts = ['<div class="records-actions">'];
+                    if (can("view")) {
+                        parts.push('<button type="button" class="btn-view" data-id="' + esc(r.Id) + '">' + svgView + " View details</button>");
+                    }
+                    if (can("edit")) {
+                        parts.push('<button type="button" class="btn-edit" data-id="' + esc(r.Id) + '">' + svgEdit + " Edit</button>");
+                    }
+                    parts.push(printCardButtonHtml(r));
+                    parts.push('<button type="button" class="btn-row-more" aria-label="More actions">' + svgMore + "</button>");
+                    parts.push("</div>");
+                    return parts.join("");
+                })()
             ]);
         }
         return data;
@@ -149,18 +273,26 @@
                 pageLength: 15,
                 lengthMenu: [[10, 15, 25, 50, -1], [10, 15, 25, 50, "All"]],
                 language: {
-                    search: "Search records:",
-                    lengthMenu: "Show _MENU_ rows",
+                    search: "",
+                    searchPlaceholder: "Search by name, ID or RFID tag",
+                    lengthMenu: "Show: _MENU_ rows",
                     info: "Showing _START_ to _END_ of _TOTAL_ records",
                     infoEmpty: "No records to show",
                     zeroRecords: "No matching records found",
-                    paginate: { first: "First", last: "Last", next: "Next", previous: "Prev" }
+                    paginate: { first: "«", last: "»", next: "›", previous: "‹" }
+                },
+                initComplete: function () {
+                    moveRecordsDtToolbar();
+                },
+                drawCallback: function () {
+                    moveRecordsDtToolbar();
                 },
                 columnDefs: [
                     { targets: [0], className: "rfid-mono" },
                     { targets: [2], orderable: true },
                     { targets: [7], className: "dt-status", orderable: false },
-                    { targets: [8], className: "dt-actions" }
+                    { targets: [8], className: "dt-status-remarks" },
+                    { targets: [9], className: "dt-actions" }
                 ]
             });
         } else {
@@ -170,47 +302,144 @@
         }
     }
 
-    function syncCachedStatus(id, status) {
+    function syncCachedStatusChange(id, status, remarks) {
         for (var i = 0; i < cachedRows.length; i++) {
             if (String(cachedRows[i].Id) === String(id)) {
                 cachedRows[i].Status = status;
+                if (remarks != null) cachedRows[i].StatusRemarks = remarks;
                 break;
             }
         }
         updateStats(cachedRows);
+        refreshTableFromCache();
     }
 
-    function setRecordStatus(id, status, inputEl) {
+    function applyStatusChangeUi(uiCtx, newStatus) {
+        if (!uiCtx) return;
+        if (uiCtx.inputEl && uiCtx.label) {
+            uiCtx.inputEl.checked = isActiveStatus(newStatus);
+            refreshSwitchUi(uiCtx.label);
+        }
+        if (uiCtx.pillBtn) {
+            refreshPillBtn(uiCtx.pillBtn, isActiveStatus(newStatus));
+        }
+    }
+
+    function setStatusChangeBadge(el, status) {
+        if (!el) return;
+        var active = isActiveStatus(status);
+        el.textContent = active ? "Active" : "Inactive";
+        el.className =
+            "status-change-badge " + (active ? "status-change-badge--active" : "status-change-badge--inactive");
+    }
+
+    function showStatusChangeError(msg) {
+        var el = document.getElementById("statusChangeError");
+        if (!el) return;
+        el.textContent = msg || "";
+        el.classList.toggle("is-hidden", !msg);
+    }
+
+    function openStatusChangeModal(id, newStatus, uiCtx) {
+        statusChangeCtx = { id: id, newStatus: newStatus, uiCtx: uiCtx || {} };
+        var rec = findCachedRecord(id);
+        var empId = rec && rec.EmpId ? rec.EmpId : "—";
+        var fromStatus = isActiveStatus(newStatus) ? "Inactive" : "Active";
+        var sub = document.getElementById("statusChangeSub");
+        if (sub) sub.textContent = "Record #" + id + " · Employee " + empId;
+        setStatusChangeBadge(document.getElementById("statusChangeFrom"), fromStatus);
+        setStatusChangeBadge(document.getElementById("statusChangeTo"), newStatus);
+        var title = document.getElementById("statusChangeTitle");
+        if (title) {
+            title.textContent = newStatus === "Active" ? "Activate this record" : "Deactivate this record";
+        }
+        var head = document.querySelector(".status-change-modal__head");
+        if (head) {
+            head.classList.toggle("status-change-modal__head--activate", newStatus === "Active");
+            head.classList.toggle("status-change-modal__head--deactivate", newStatus !== "Active");
+        }
+        var ta = document.getElementById("statusChangeRemarks");
+        if (ta) ta.value = "";
+        showStatusChangeError("");
+        document.getElementById("statusChangeModal").classList.remove("is-hidden");
+        document.body.style.overflow = "hidden";
+        if (ta) window.setTimeout(function () { ta.focus(); }, 60);
+    }
+
+    function closeStatusChangeModal() {
+        var modal = document.getElementById("statusChangeModal");
+        if (modal) modal.classList.add("is-hidden");
+        var othersOpen = ["detailModal", "printCardModal", "editModal"].some(function (mid) {
+            var m = document.getElementById(mid);
+            return m && !m.classList.contains("is-hidden");
+        });
+        if (!othersOpen) document.body.style.overflow = "";
+        statusChangeCtx = null;
+    }
+
+    function confirmStatusChange() {
+        if (!statusChangeCtx) return;
+        var remarks = (document.getElementById("statusChangeRemarks").value || "").trim();
+        if (!remarks) {
+            showStatusChangeError("Please enter remarks before confirming.");
+            return;
+        }
+        showStatusChangeError("");
+        var btn = document.getElementById("btnConfirmStatusChange");
+        var label = btn ? btn.textContent : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Saving…";
+        }
+        setRecordStatus(statusChangeCtx.id, statusChangeCtx.newStatus, remarks, statusChangeCtx.uiCtx)
+            .then(function () {
+                closeStatusChangeModal();
+            })
+            .catch(function () {
+                /* SweetAlert in setRecordStatus */
+            })
+            .finally(function () {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = label;
+                }
+            });
+    }
+
+    function setRecordStatus(id, status, remarks, uiCtx) {
         var body = new URLSearchParams();
         body.append("id", id);
         body.append("status", status);
+        body.append("remarks", remarks || "");
 
-        return fetch("RfidRecords.ashx?action=setstatus", {
+        return fetchJson(recordsApiUrl("action=setstatus"), {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: body.toString(),
-            credentials: "same-origin"
+            body: body.toString()
         })
-            .then(function (res) { return res.json(); })
             .then(function (payload) {
                 if (!payload || !payload.Ok) {
                     throw new Error((payload && payload.Error) || "Unable to update status.");
                 }
                 var newStatus = payload.Status || status;
-                syncCachedStatus(id, newStatus);
+                var newRemarks = (payload && payload.StatusRemarks) || remarks || "";
+                syncCachedStatusChange(id, newStatus, newRemarks);
                 setPrintButtonForRecord(id, isActiveStatus(newStatus));
-                showAlert("Record #" + id + " is now " + newStatus + ".", false);
-                return payload;
+                applyStatusChangeUi(uiCtx, newStatus);
+                return recordsSweetAlert(
+                    "success",
+                    "Status updated",
+                    "Record #" + id + " is now " + newStatus + "."
+                ).then(function () {
+                    return payload;
+                });
             })
             .catch(function (err) {
-                showAlert(err.message || "Failed to update status.", true);
-                if (inputEl) {
-                    inputEl.checked = !inputEl.checked;
-                    refreshSwitchUi(inputEl.closest(".status-switch"));
-                }
-            })
-            .finally(function () {
-                if (inputEl) inputEl.disabled = false;
+                return recordsSweetAlert("error", "Status not saved", err.message || "Failed to update status.").then(
+                    function () {
+                        throw err;
+                    }
+                );
             });
     }
 
@@ -227,9 +456,12 @@
     }
 
     function loadRecords() {
+        if (!can("list")) {
+            showAlert("You do not have permission to load records.", true);
+            return;
+        }
         showAlert("");
-        fetch("RfidRecords.ashx?action=list", { cache: "no-store" })
-            .then(function (res) { return res.json(); })
+        fetchJson(recordsApiUrl("action=list"), { cache: "no-store" })
             .then(function (payload) {
                 if (!payload || !payload.Ok) {
                     showAlert((payload && payload.Error) || "Unable to load records.", true);
@@ -242,8 +474,8 @@
                 updateStats(rows);
                 initOrRefreshTable(rows);
             })
-            .catch(function () {
-                showAlert("Network error while loading records.", true);
+            .catch(function (err) {
+                showAlert((err && err.message) || "Network error while loading records.", true);
                 initOrRefreshTable([]);
             });
     }
@@ -348,6 +580,7 @@
             detailCell("Approved", record.IsApproved === "Yes" ? "Yes" : (record.IsApproved === "No" ? "No" : record.IsApproved)) +
             detailCell("Approved date", record.ApprovedDate) +
             detailCell("Approver ID", record.ApproveId) +
+            detailCell("Status remarks", record.StatusRemarks, true) +
             detailCell("HOD remarks", record.HodRemarks, true) +
             detailCell("Requester remarks", record.RequesterRemarks, true) +
             "</dl></article>"
@@ -489,6 +722,37 @@
         );
     }
 
+    function printAssignmentFieldsHtml(record) {
+        var printIso = displayDateToIso(record.PrintDate);
+        var createdDisplay = record.CreatedDate && String(record.CreatedDate).trim() ? record.CreatedDate : "—";
+        return (
+            '<div class="print-assign-fields">' +
+            '<input type="hidden" id="printCardRecordId" value="' + esc(record.Id != null ? String(record.Id) : "") + '" />' +
+            '<div class="edit-field edit-field--full">' +
+            '<label for="printCardRfidNumber">RFID number</label>' +
+            '<input type="text" id="printCardRfidNumber" class="edit-input rfid-mono" maxlength="50" placeholder="e.g. 123456" value="' + esc(record.RfidNumber || "") + '" />' +
+            '<p class="print-assign-hint">Assign the physical card tag before printing.</p>' +
+            "</div>" +
+            '<div class="edit-field">' +
+            '<label for="printCardPrintDate">Print date</label>' +
+            '<input type="date" id="printCardPrintDate" class="edit-input" value="' + esc(printIso) + '" />' +
+            "</div>" +
+            '<div class="edit-field">' +
+            '<label for="printCardIssuedBy">Issued by</label>' +
+            '<input type="text" id="printCardIssuedBy" class="edit-input" maxlength="50" placeholder="Name" value="' + esc(record.IssuedBy || "") + '" />' +
+            "</div>" +
+            '<div class="edit-field edit-field--full">' +
+            "<label>Created date</label>" +
+            '<div class="print-assign-readonly" id="printCardCreatedDisplay" title="Set automatically when the record is saved from the RFID form">' +
+            esc(createdDisplay) +
+            "</div>" +
+            '<p class="print-assign-hint">System date when the record was created (not editable).</p>' +
+            "</div>" +
+            '<p id="printAssignError" class="edit-form-error is-hidden" role="alert"></p>' +
+            "</div>"
+        );
+    }
+
     function renderPrintCardLayout(record) {
         var name = primaryName(record);
         var subtitle = name
@@ -504,10 +768,12 @@
             '<div class="print-card-layout__split">' +
             '<section class="print-card-layout__cards">' +
             '<p class="print-card-layout__cards-title">Card preview (front &amp; back)</p>' +
-            renderIdCardBlock(record) +
+            '<div id="printCardPreviewHost">' + renderIdCardBlock(record) + "</div>" +
             "</section>" +
             '<section class="print-card-layout__form">' +
-            '<p class="print-card-layout__form-title">Assignment details</p>' +
+            '<p class="print-card-layout__form-title">Print &amp; assignment</p>' +
+            printAssignmentFieldsHtml(record) +
+            '<p class="print-card-layout__form-title print-card-layout__form-title--sub">Other details</p>' +
             '<div class="ro-form ro-form--wide">' +
             roField("Record ID", record.Id) +
             roField("Employee ID", record.EmpId) +
@@ -519,13 +785,10 @@
             roField("Blood group", record.BloodGroup) +
             roField("CNIC", record.Cnic) +
             roField("Emergency #", record.EmergencyNo) +
-            roField("RFID number", record.RfidNumber) +
             roField("Status", record.Status) +
+            roField("Status remarks", record.StatusRemarks) +
             roField("Issue date", record.IssueDate) +
             roField("Expiry date", record.ExpiryDate) +
-            roField("Print date", record.PrintDate) +
-            roField("Created date", record.CreatedDate) +
-            roField("Issued by", record.IssuedBy) +
             roField("Approved", record.IsApproved) +
             roField("Approved date", record.ApprovedDate) +
             roField("Approver ID", record.ApproveId) +
@@ -541,6 +804,11 @@
     function openPrintModal() {
         document.getElementById("printCardModal").classList.remove("is-hidden");
         document.body.style.overflow = "hidden";
+        var printBtn = document.getElementById("btnPrintCardPreview");
+        if (printBtn) {
+            printBtn.disabled = true;
+            printBtn.classList.add("is-disabled");
+        }
     }
 
     function closePrintModal() {
@@ -550,22 +818,130 @@
         }
     }
 
+    function showPrintAssignError(msg) {
+        var el = document.getElementById("printAssignError");
+        if (!el) return;
+        el.textContent = msg || "";
+        el.classList.toggle("is-hidden", !msg);
+    }
+
+    function recordsSweetAlert(kind, title, message) {
+        var text = message || "";
+        if (typeof Swal === "undefined") {
+            window.alert(title + (text ? "\n\n" + text : ""));
+            return Promise.resolve();
+        }
+        return Swal.fire({
+            icon: kind,
+            title: title,
+            text: text,
+            confirmButtonColor: "#004d4d"
+        });
+    }
+
+    function printAssignmentIsComplete() {
+        var rfidEl = document.getElementById("printCardRfidNumber");
+        var printEl = document.getElementById("printCardPrintDate");
+        var issuedEl = document.getElementById("printCardIssuedBy");
+        var createdEl = document.getElementById("printCardCreatedDisplay");
+        var rfid = rfidEl ? String(rfidEl.value || "").trim() : "";
+        var printDate = printEl ? String(printEl.value || "").trim() : "";
+        var issuedBy = issuedEl ? String(issuedEl.value || "").trim() : "";
+        var created = createdEl ? String(createdEl.textContent || "").trim() : "";
+        if (!rfid || !printDate || !issuedBy) {
+            return false;
+        }
+        if (!created || created === "—" || created === "-") {
+            return false;
+        }
+        return true;
+    }
+
+    function syncPrintCardButton() {
+        var btn = document.getElementById("btnPrintCardPreview");
+        if (!btn) return;
+        var ok = printAssignmentIsComplete();
+        btn.disabled = !ok;
+        btn.classList.toggle("is-disabled", !ok);
+        btn.setAttribute("aria-disabled", ok ? "false" : "true");
+        if (!ok) {
+            btn.setAttribute("title", "Fill RFID number, print date, issued by, and ensure created date is set.");
+        } else {
+            btn.removeAttribute("title");
+        }
+    }
+
+    function savePrintAssignment() {
+        var idEl = document.getElementById("printCardRecordId");
+        var id = idEl ? idEl.value : "";
+        if (!id) {
+            showPrintAssignError("Record is still loading.");
+            return;
+        }
+        showPrintAssignError("");
+        var btn = document.getElementById("btnSavePrintAssignment");
+        var label = btn ? btn.textContent : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Saving…";
+        }
+        var body = new URLSearchParams();
+        body.append("id", id);
+        body.append("issuedBy", (document.getElementById("printCardIssuedBy") || {}).value || "");
+        body.append("printDate", (document.getElementById("printCardPrintDate") || {}).value || "");
+        body.append("rfidNumber", (document.getElementById("printCardRfidNumber") || {}).value || "");
+
+        fetchJson(recordsApiUrl("action=updateprintassignment"), {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString()
+        })
+            .then(function (payload) {
+                if (!payload || !payload.Ok || !payload.Record) {
+                    throw new Error((payload && payload.Error) || "Unable to save assignment.");
+                }
+                var r = payload.Record;
+                var bodyEl = document.getElementById("printCardBody");
+                if (bodyEl) {
+                    bodyEl.innerHTML = renderPrintCardLayout(r);
+                }
+                syncPrintCardButton();
+                loadRecords();
+                return recordsSweetAlert(
+                    "success",
+                    "Assignment saved",
+                    "Print and assignment details were saved for record #" + id + "."
+                );
+            })
+            .catch(function (err) {
+                var msg = (err && err.message) || "Could not save assignment.";
+                showPrintAssignError(msg);
+                return recordsSweetAlert("error", "Save failed", msg);
+            })
+            .finally(function () {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = label;
+                }
+            });
+    }
+
     function showPrintCard(id) {
         var body = document.getElementById("printCardBody");
         body.innerHTML = '<p class="detail-loading">Loading…</p>';
         openPrintModal();
 
-        fetch("RfidRecords.ashx?action=detail&id=" + encodeURIComponent(id), { cache: "no-store" })
-            .then(function (res) { return res.json(); })
+        fetchJson(recordsApiUrl("action=detail&id=" + encodeURIComponent(id)), { cache: "no-store" })
             .then(function (payload) {
                 if (!payload || !payload.Ok || !payload.Record) {
                     body.innerHTML = "<p class=\"detail-loading\">" + esc((payload && payload.Error) || "Unable to load record.") + "</p>";
                     return;
                 }
                 body.innerHTML = renderPrintCardLayout(payload.Record);
+                syncPrintCardButton();
             })
-            .catch(function () {
-                body.innerHTML = '<p class="detail-loading">Network error while loading record.</p>';
+            .catch(function (err) {
+                body.innerHTML = "<p class=\"detail-loading\">" + esc((err && err.message) || "Network error while loading record.") + "</p>";
             });
     }
 
@@ -648,16 +1024,38 @@
         setEditPhotoPreview(record.PhotoPath || "");
     }
 
+    function findCachedRecord(id) {
+        var key = String(id);
+        for (var i = 0; i < cachedRows.length; i++) {
+            if (String(cachedRows[i].Id) === key) {
+                return cachedRows[i];
+            }
+        }
+        return null;
+    }
+
+    function resetEditForm() {
+        var ids = [
+            "editRecordId", "editPhotoPath", "editEmpId", "editName", "editDesignation",
+            "editDepartment", "editProject", "editJoiningDate", "editBloodGroup", "editCnic", "editEmergencyNo"
+        ];
+        ids.forEach(function (elId) {
+            var el = document.getElementById(elId);
+            if (el) el.value = "";
+        });
+        var file = document.getElementById("editPhotoFile");
+        if (file) file.value = "";
+        setEditPhotoPreview("");
+    }
+
     function showEdit(id) {
         hideEditError();
+        resetEditForm();
         openEditModal();
-        document.getElementById("editName").value = "";
-        showEditError("");
-        var loading = "Loading…";
-        document.getElementById("editModalTitle").textContent = loading;
+        document.getElementById("editModalTitle").textContent = "Loading…";
+        document.getElementById("editModalSub").textContent = "Record #" + id;
 
-        fetch("RfidRecords.ashx?action=detail&id=" + encodeURIComponent(id), { cache: "no-store" })
-            .then(function (res) { return res.json(); })
+        fetchJson(recordsApiUrl("action=detail&id=" + encodeURIComponent(id)), { cache: "no-store" })
             .then(function (payload) {
                 if (!payload || !payload.Ok || !payload.Record) {
                     showEditError((payload && payload.Error) || "Unable to load record.");
@@ -665,8 +1063,8 @@
                 }
                 populateEditForm(payload.Record);
             })
-            .catch(function () {
-                showEditError("Network error while loading record.");
+            .catch(function (err) {
+                showEditError((err && err.message) || "Network error while loading record.");
             });
     }
 
@@ -697,7 +1095,7 @@
             body.append("emergencyNo", document.getElementById("editEmergencyNo").value.trim());
             body.append("photoPath", photoPath || "");
 
-            return fetchJson("RfidRecords.ashx?action=updateprofile", {
+            return fetchJson(recordsApiUrl("action=updateprofile"), {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: body.toString(),
@@ -741,6 +1139,14 @@
     }
 
     function printCardPreviewOnly() {
+        if (!printAssignmentIsComplete()) {
+            recordsSweetAlert(
+                "warning",
+                "Complete print & assignment",
+                "Fill RFID number, print date, and issued by before printing."
+            );
+            return;
+        }
         var area = document.getElementById("printCardPreviewArea");
         if (!area) return;
 
@@ -783,8 +1189,7 @@
         body.innerHTML = '<p class="detail-loading">Loading…</p>';
         openModal();
 
-        fetch("RfidRecords.ashx?action=detail&id=" + encodeURIComponent(id), { cache: "no-store" })
-            .then(function (res) { return res.json(); })
+        fetchJson(recordsApiUrl("action=detail&id=" + encodeURIComponent(id)), { cache: "no-store" })
             .then(function (payload) {
                 if (!payload || !payload.Ok || !payload.Record) {
                     body.innerHTML = "<p class=\"detail-loading\">" + esc((payload && payload.Error) || "Unable to load details.") + "</p>";
@@ -795,20 +1200,99 @@
                 if (title) {
                     title.textContent = name ? name + " (" + (r.EmpId || "") + ")" : "Employee " + (r.EmpId || "—");
                 }
-                body.innerHTML = renderDetail(r);
+                try {
+                    body.innerHTML = renderDetail(r);
+                } catch (renderErr) {
+                    body.innerHTML = "<p class=\"detail-loading\">" + esc((renderErr && renderErr.message) || "Could not display record details.") + "</p>";
+                }
             })
-            .catch(function () {
-                body.innerHTML = '<p class="detail-loading">Network error while loading details.</p>';
+            .catch(function (err) {
+                body.innerHTML = "<p class=\"detail-loading\">" + esc((err && err.message) || "Network error while loading details.") + "</p>";
             });
+    }
+
+    var newRequestFormReady = false;
+
+    function recordsFormSaveUrl() {
+        var root = window.RFID_APP_ROOT || "./";
+        if (root.charAt(root.length - 1) !== "/") root += "/";
+        return root + "RfidFormSave.ashx";
+    }
+
+    function ensureNewRequestForm() {
+        if (!window.RfidForm || newRequestFormReady) return;
+        RfidForm.configure({
+            ajaxSaveUrl: recordsFormSaveUrl(),
+            onSaveSuccess: function () {
+                closeNewRequestModal();
+                loadRecords();
+            }
+        });
+        RfidForm.init();
+        newRequestFormReady = true;
+        applyNewRequestPermissionUi();
+    }
+
+    function applyNewRequestPermissionUi() {
+        var saveBtns = [
+            document.getElementById("btnNewRequestSave"),
+            document.getElementById("btnSaveAside")
+        ];
+        for (var i = 0; i < saveBtns.length; i++) {
+            if (saveBtns[i]) saveBtns[i].style.display = can("formSave") ? "" : "none";
+        }
+        var clearBtn = document.getElementById("btnClear");
+        if (clearBtn) clearBtn.style.display = can("formClear") ? "" : "none";
+    }
+
+    function openNewRequestModal() {
+        if (!can("form")) return;
+        ensureNewRequestForm();
+        if (window.RfidForm && RfidForm.resetFormValues) RfidForm.resetFormValues();
+        document.getElementById("newRequestModal").classList.remove("is-hidden");
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeNewRequestModal() {
+        var modal = document.getElementById("newRequestModal");
+        if (modal) modal.classList.add("is-hidden");
+        var othersOpen = ["detailModal", "printCardModal", "editModal", "statusChangeModal"].some(function (mid) {
+            var m = document.getElementById(mid);
+            return m && !m.classList.contains("is-hidden");
+        });
+        if (!othersOpen) document.body.style.overflow = "";
     }
 
     function bindEvents() {
         document.getElementById("btnRefreshRecords").addEventListener("click", loadRecords);
+        var lnkNew = document.getElementById("lnkNewRequest");
+        if (lnkNew) {
+            lnkNew.addEventListener("click", function (e) {
+                e.preventDefault();
+                openNewRequestModal();
+            });
+        }
+        var nrClose = document.getElementById("newRequestClose");
+        var nrBackdrop = document.getElementById("newRequestBackdrop");
+        if (nrClose) nrClose.addEventListener("click", closeNewRequestModal);
+        if (nrBackdrop) nrBackdrop.addEventListener("click", closeNewRequestModal);
+        var nrCloseFoot = document.getElementById("newRequestCloseFoot");
+        if (nrCloseFoot) nrCloseFoot.addEventListener("click", closeNewRequestModal);
         document.getElementById("detailClose").addEventListener("click", closeModal);
         document.getElementById("detailCloseFoot").addEventListener("click", closeModal);
         document.getElementById("detailBackdrop").addEventListener("click", closeModal);
         document.addEventListener("keydown", function (e) {
             if (e.key !== "Escape") return;
+            var cap = document.getElementById("captchaModal");
+            if (cap && !cap.classList.contains("is-hidden")) return;
+            if (!document.getElementById("newRequestModal").classList.contains("is-hidden")) {
+                closeNewRequestModal();
+                return;
+            }
+            if (!document.getElementById("statusChangeModal").classList.contains("is-hidden")) {
+                closeStatusChangeModal();
+                return;
+            }
             if (!document.getElementById("printCardModal").classList.contains("is-hidden")) {
                 closePrintModal();
                 return;
@@ -858,16 +1342,40 @@
             if (!label || input.disabled) return;
             var id = label.getAttribute("data-id");
             if (!id) return;
-            var status = input.checked ? "Active" : "Inactive";
+            var newStatus = input.checked ? "Active" : "Inactive";
+            input.checked = !input.checked;
             refreshSwitchUi(label);
-            input.disabled = true;
-            setRecordStatus(id, status, input);
+            openStatusChangeModal(id, newStatus, { inputEl: input, label: label });
         });
+
+        $("#recordsTable").on("click", ".status-pill-btn", function () {
+            var btn = this;
+            if (btn.disabled) return;
+            var id = btn.getAttribute("data-id");
+            if (!id) return;
+            var active = btn.getAttribute("data-active") === "true";
+            var newStatus = active ? "Inactive" : "Active";
+            openStatusChangeModal(id, newStatus, { pillBtn: btn });
+        });
+
+        document.getElementById("statusChangeClose").addEventListener("click", closeStatusChangeModal);
+        document.getElementById("statusChangeCancel").addEventListener("click", closeStatusChangeModal);
+        document.getElementById("statusChangeBackdrop").addEventListener("click", closeStatusChangeModal);
+        document.getElementById("btnConfirmStatusChange").addEventListener("click", confirmStatusChange);
 
         document.getElementById("printCardClose").addEventListener("click", closePrintModal);
         document.getElementById("printCardCloseFoot").addEventListener("click", closePrintModal);
         document.getElementById("printCardBackdrop").addEventListener("click", closePrintModal);
         document.getElementById("btnPrintCardPreview").addEventListener("click", printCardPreviewOnly);
+        $("#printCardModal").on("input change", "#printCardRfidNumber, #printCardPrintDate, #printCardIssuedBy", syncPrintCardButton);
+        var btnSavePrint = document.getElementById("btnSavePrintAssignment");
+        if (btnSavePrint) {
+            if (!can("print") && !can("edit")) {
+                btnSavePrint.classList.add("is-hidden");
+            } else {
+                btnSavePrint.addEventListener("click", savePrintAssignment);
+            }
+        }
         document.getElementById("editClose").addEventListener("click", closeEditModal);
         document.getElementById("editCloseFoot").addEventListener("click", closeEditModal);
         document.getElementById("editBackdrop").addEventListener("click", closeEditModal);

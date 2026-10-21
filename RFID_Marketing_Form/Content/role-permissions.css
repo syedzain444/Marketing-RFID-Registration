@@ -1,0 +1,382 @@
+/* Roles & Permissions — Bahria Town admin layout */
+
+:root {
+    --rp-ink: #1a2e2e;
+    --rp-muted: #6b7b7b;
+    --rp-teal: #004d4d;
+    --rp-teal-dark: #003939;
+    --rp-teal-sidebar: #004646;
+    --rp-teal-active: rgba(255, 255, 255, 0.12);
+    --rp-orange: #e8882e;
+    --rp-bg: #eef2f4;
+    --rp-card: #ffffff;
+    --rp-line: #e2e8ec;
+    --rp-font: "Inter", "Segoe UI", system-ui, sans-serif;
+    --rp-ok: #0a7a62;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body.rp-page {
+    margin: 0;
+    height: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+    font-family: var(--rp-font);
+    font-size: 14px;
+    color: var(--rp-ink);
+    background: var(--rp-bg);
+}
+
+.rp-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+body.rp-page .rp-main.marketing-main > .topbar.rp-topbar {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    background: var(--sheet, #fff);
+}
+
+body.rp-page form#form1.rp-form .rp-main.marketing-main {
+    min-height: 0;
+}
+
+.rp-main__bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 80% 50% at 90% 10%, rgba(126, 196, 196, 0.25) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 10% 90%, rgba(0, 77, 77, 0.08) 0%, transparent 50%),
+        var(--rp-bg);
+}
+
+.rp-main__scroll {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 16px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rp-msg {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.rp-msg--ok {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.rp-msg--err {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.rp-card {
+    background: var(--rp-card);
+    border-radius: 16px;
+    border: 1px solid var(--rp-line);
+    box-shadow: 0 4px 24px rgba(15, 35, 35, 0.06);
+    flex-shrink: 0;
+}
+
+.rp-card--role {
+    padding: 18px 22px;
+}
+
+.rp-card--perms {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 22px 20px;
+    overflow: hidden;
+}
+
+.rp-role-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.rp-role-field {
+    flex: 1 1 280px;
+    max-width: 420px;
+}
+
+.rp-field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--rp-ink);
+    margin-bottom: 4px;
+}
+
+.rp-field-label svg {
+    color: var(--rp-teal);
+}
+
+.rp-field-hint {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--rp-muted);
+}
+
+.rp-select {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    border: 1px solid var(--rp-line);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--rp-ink);
+    background: #fff;
+}
+
+body.rp-page .rp-topbar .actions button.btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.rp-admin-banner {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    background: #e6f0f0;
+    border: 1px solid rgba(0, 77, 77, 0.15);
+    color: var(--rp-teal);
+}
+
+.rp-perms-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+}
+
+.rp-perms-head__title {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.rp-perms-head__title h2 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.rp-perms-head__title p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--rp-muted);
+    max-width: 420px;
+    line-height: 1.45;
+}
+
+.rp-shield {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #e6f0f0;
+    color: var(--rp-teal);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.rp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rp-teal);
+    background: #e6f0f0;
+    border: 1px solid rgba(0, 77, 77, 0.12);
+    white-space: nowrap;
+}
+
+.rp-perm-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    align-content: start;
+    overflow: hidden;
+}
+
+.rp-perm-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--rp-line);
+    background: #fafbfc;
+    min-height: 72px;
+}
+
+.rp-perm-item__toggle {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.rp-perm-item__toggle input[type="hidden"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Same toggle as Records grid STATUS column (rfid-records.css) */
+.rp-perm-item__toggle .status-switch {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+
+.rp-perm-item__toggle .status-switch__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.rp-perm-item__toggle .status-switch__track {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: #d8e0e0;
+    box-shadow: inset 0 1px 3px rgba(15, 35, 35, 0.12);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rp-perm-item__toggle .status-switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(15, 35, 35, 0.22);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rp-perm-item__toggle .status-switch__input:checked + .status-switch__track {
+    background: linear-gradient(135deg, #0a7a62 0%, var(--rp-ok) 100%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.rp-perm-item__toggle .status-switch__input:checked + .status-switch__track .status-switch__thumb {
+    transform: translateX(20px);
+}
+
+.rp-perm-item__toggle .status-switch__input:focus-visible + .status-switch__track {
+    outline: 2px solid var(--rp-teal);
+    outline-offset: 2px;
+}
+
+.rp-perm-item__toggle .status-switch__input:disabled + .status-switch__track {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.rp-perm-item__left {
+    grid-column: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+}
+
+.rp-perm-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+}
+
+.rp-perm-icon--admin { background: #ede9fe; color: #6d28d9; }
+.rp-perm-icon--screen { background: #dbeafe; color: #2563eb; }
+.rp-perm-icon--form { background: #ffedd5; color: #ea580c; }
+.rp-perm-icon--records { background: #d1fae5; color: #059669; }
+
+.rp-perm-item__text strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 2px;
+}
+
+.rp-perm-item__text span {
+    display: block;
+    font-size: 11px;
+    color: var(--rp-muted);
+    line-height: 1.35;
+}
+
+@media (max-width: 960px) {
+    .rp-perm-grid {
+        grid-template-columns: 1fr;
+        overflow: auto;
+    }
+
+    body.rp-page {
+        overflow: auto;
+    }
+}

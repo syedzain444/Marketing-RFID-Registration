@@ -2,16 +2,26 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Web;
 using System.Web.Script.Serialization;
+using System.Web.SessionState;
 using RFID_Marketing_Form.Data;
 
 namespace RFID_Marketing_Form
 {
-    public class RfidCheck : IHttpHandler
+    public class RfidCheck : IHttpHandler, IRequiresSessionState
     {
         public void ProcessRequest(HttpContext context)
         {
             context.Response.ContentType = "application/json";
             context.Response.Cache.SetCacheability(HttpCacheability.NoCache);
+
+            MarketingAuthContext.EnsurePermissionsLoaded(context);
+            string authErr;
+            if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ScreenForm, out authErr))
+            {
+                context.Response.StatusCode = 403;
+                context.Response.Write(new JavaScriptSerializer().Serialize(new { ok = false, error = authErr }));
+                return;
+            }
 
             var empId = (context.Request.Form["empId"] ?? context.Request.QueryString["empId"] ?? string.Empty).Trim();
             var rfid = (context.Request.Form["rfid"] ?? context.Request.QueryString["rfid"] ?? string.Empty).Trim();

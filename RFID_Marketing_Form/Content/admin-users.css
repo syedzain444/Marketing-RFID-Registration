@@ -1,0 +1,9 @@
+/* Application users — page-specific tweaks (layout width in marketing-wide.css) */
+
+.admin-users-root .records-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-users-root table.records-table {
+    table-layout: auto;
+}

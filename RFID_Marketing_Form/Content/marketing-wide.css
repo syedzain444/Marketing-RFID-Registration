@@ -1,0 +1,52 @@
+/* Full-width main area (sidebar pages) — same as Application users */
+
+.marketing-app .marketing-main > .topbar {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+.marketing-app .marketing-main .records-main {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 16px 18px 36px;
+    box-sizing: border-box;
+}
+
+.marketing-app .marketing-main .shell {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    padding: 12px 18px 16px;
+    box-sizing: border-box;
+}
+
+.marketing-app .marketing-main .layout {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+}
+
+body.rp-page.marketing-app .rp-main__scroll {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+.marketing-app .records-table-wrap {
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+@media (min-width: 1400px) {
+    .marketing-app .marketing-main .records-main,
+    .marketing-app .marketing-main .shell,
+    body.rp-page.marketing-app .rp-main__scroll {
+        padding-left: 22px;
+        padding-right: 22px;
+    }
+
+    .marketing-app .marketing-main > .topbar {
+        padding-left: 22px;
+        padding-right: 22px;
+    }
+}
