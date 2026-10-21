@@ -1,0 +1,70 @@
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\RFID_Marketing_Form.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\RFID_Marketing_Form.pdb
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Antlr3.Runtime.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\AspNet.ScriptManager.jQuery.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\AspNet.ScriptManager.jQuery.UI.Combined.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.AspNet.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.Core.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.Consumer.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.RelyingParty.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\EntityFramework.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.AspNet.Membership.OpenAuth.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.AspNet.Web.Optimization.WebForms.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.ScriptManager.MSAjax.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.ScriptManager.WebForms.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.Web.Infrastructure.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\Oracle.ManagedDataAccess.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\System.Web.Optimization.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\System.Web.Providers.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\WebGrease.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\EntityFramework.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.Core.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.Consumer.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.RelyingParty.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.AspNet.xml
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.dll
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.pdb
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\bin\RFID_Marketing_Form.dll.config
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csproj.AssemblyReference.cache
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csproj.CoreCompileInputs.cache
+d:\Projects\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Mar.DCBA284B.Up2Date
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\RFID_Marketing_Form.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\RFID_Marketing_Form.pdb
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Antlr3.Runtime.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\AspNet.ScriptManager.jQuery.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\AspNet.ScriptManager.jQuery.UI.Combined.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.AspNet.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.Core.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.Consumer.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.RelyingParty.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\EntityFramework.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.AspNet.Membership.OpenAuth.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.AspNet.Web.Optimization.WebForms.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.ScriptManager.MSAjax.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.ScriptManager.WebForms.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Microsoft.Web.Infrastructure.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Oracle.ManagedDataAccess.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\System.Web.Optimization.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\System.Web.Providers.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\WebGrease.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\EntityFramework.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.Core.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.Consumer.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.RelyingParty.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\DotNetOpenAuth.AspNet.xml
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.dll
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.pdb
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\.gitkeep
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\WhatsApp Image 2026-03-15 at 8.45.10 PM.jpeg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\WhatsApp Image 2026-08-29 at 4.26.36 PM.jpeg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain.jpeg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csprojResolveAssemblyReference.cache
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain-2.jpeg

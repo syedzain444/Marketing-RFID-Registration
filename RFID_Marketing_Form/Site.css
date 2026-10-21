@@ -1,0 +1,475 @@
+/* ============================================================
+   Bahria Town — Employee ID card (CR80 portrait preview & print)
+   Used by Records print modal, MyRequests, and confirm print.
+   ============================================================ */
+
+.card-container,
+.card-preview-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.card-container.preview-scaled > .card-print-page,
+.card-preview-stack > .card-print-page {
+    display: flex;
+    justify-content: center;
+}
+
+.card-container.preview-scaled,
+.card-preview-stack.preview-scaled,
+.card-preview-stack {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 22px;
+    transform: scale(0.88);
+    transform-origin: top center;
+    margin: 0 auto;
+    min-width: min-content;
+}
+
+@media (max-width: 640px) {
+    .card-container.preview-scaled,
+    .card-preview-stack {
+        flex-direction: column;
+        align-items: center;
+        transform: scale(0.82);
+    }
+}
+
+/* CR80 ~ 54 × 85.6 mm */
+.id-card {
+    width: 204px;
+    height: 323px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9px;
+    line-height: 1.3;
+    position: relative;
+    flex-shrink: 0;
+}
+
+/* —— Front —— */
+.front-card {
+    background: #d4bc7d;
+    border: 1px solid #b8a066;
+    color: #111;
+}
+
+.front-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 10px 4px;
+    background: transparent;
+    min-height: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.header-logo img {
+    width: 72px;
+    max-height: 52px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.header-photo {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e8e8e8;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.header-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.front-body {
+    position: relative;
+    z-index: 1;
+    padding: 6px 14px 40px;
+    min-height: 180px;
+}
+
+.front-body::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    width: 250px;
+    height: 169px;
+    background: url(Images/logo-mono.png) center / contain no-repeat;
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.front-body .field-group {
+    position: relative;
+    z-index: 1;
+}
+
+.field-group {
+    margin-bottom: 6px;
+}
+
+.field-label {
+    display: block;
+    font-size: 8px;
+    color: #1a1a1a;
+    font-weight: 400;
+}
+
+.field-value {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #000;
+    word-break: break-word;
+    text-transform: uppercase;
+}
+
+.field-value.emp-id {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: none;
+}
+
+.grade-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #c4a574;
+    color: #000;
+    text-align: center;
+    font-weight: 800;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    padding: 8px 4px;
+    z-index: 3;
+}
+
+/* —— Back (matches Bahria Town CR80 artwork) —— */
+.back-card {
+    background: #fff;
+    border: 1px solid #666;
+    display: flex;
+    flex-direction: column;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 700;
+}
+
+.back-details {
+    flex-shrink: 0;
+    padding: 11px 11px 45px;
+    border-bottom: 1px solid #000;
+}
+
+.back-row {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    margin-bottom: 1px;
+    font-size: 8px;
+    line-height: 0.2;
+    font-weight: 700;
+}
+
+.back-row:last-child {
+    margin-bottom: 0;
+}
+
+.back-label {
+    display: table-cell;
+    width: 8vh;
+    color: #000;
+    font-weight: 700;
+    white-space: nowrap;
+    vertical-align: middle;
+    padding: 0 4px 0 0;
+}
+
+.back-value {
+    display: table-cell;
+    width: 15vh;
+    color: #000;
+    font-weight: 700;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #000;
+    padding: 0 0 1px 4px;
+    text-decoration: none;
+    line-height: 1.2;
+}
+
+.back-notes {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 9px 10px 8px;
+    font-size: 6.5px;
+    font-weight: 700;
+    color: #000;
+    line-height: 1.32;
+    border-bottom: 1px solid #000;
+}
+
+.back-notes p {
+    margin: 0 0 5px;
+}
+
+.back-notes p:last-of-type {
+    margin-bottom: 0;
+}
+
+.authority-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.authority-text {
+    font-size: 6px;
+    line-height: 1.35;
+    flex: 1 1 auto;
+    max-width: 58%;
+    font-weight: 700;
+}
+
+.authority-text strong {
+    font-weight: 700;
+}
+
+.authority-sign {
+    flex-shrink: 0;
+    text-align: right;
+}
+
+.authority-sign img {
+    width: 56px;
+    height: auto;
+    display: block;
+    margin-left: auto;
+}
+
+.sign-line {
+    border-top: 1px solid #000;
+    width: 60px;
+    margin-top: 1px;
+    margin-left: auto;
+}
+
+.back-footer {
+    flex-shrink: 0;
+    background: #fff;
+    color: #000;
+    text-align: center;
+    padding: 9px 8px 11px;
+    font-size: 6px;
+    line-height: 1.38;
+    font-weight: 700;
+}
+
+.back-footer p {
+    margin: 0;
+    font-weight: 700;
+}
+
+.back-footer p strong {
+    font-weight: 700;
+}
+
+/* Hidden print panel (MyRequests) */
+.pnl-print-wrapper {
+    display: none;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .pnl-print-wrapper {
+        display: block !important;
+    }
+
+    .print-page {
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .print-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    /* Records: page 1 = front, page 2 = back (CR80 portrait). No fixed stacking. */
+    body.print-card-preview > *:not(.card-print-root) {
+        display: none !important;
+    }
+
+    body.print-card-preview {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    body.print-card-preview .card-print-root {
+        display: block !important;
+        position: static !important;
+        width: 54mm;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    body.print-card-preview .card-print-page {
+        width: 54mm;
+        height: 85.6mm;
+        min-height: 85.6mm;
+        max-height: 85.6mm;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        overflow: hidden;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+    }
+
+    body.print-card-preview .card-print-page--front {
+        page-break-after: always;
+        break-after: page;
+    }
+
+    body.print-card-preview .card-print-page--back {
+        page-break-before: always;
+        break-before: page;
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    body.print-card-preview .card-print-root .id-card {
+        width: 54mm !important;
+        height: 85.6mm !important;
+        max-width: 54mm !important;
+        max-height: 85.6mm !important;
+        transform: none !important;
+        box-shadow: none !important;
+        border-radius: 2mm;
+        flex-shrink: 0;
+        margin: 0;
+        overflow: hidden;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body.print-card-preview .card-print-root .front-card {
+        display: block !important;
+    }
+
+    body.print-card-preview .card-print-root .back-card {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 85.6mm !important;
+        border: 0.25mm solid #666 !important;
+        font-size: 6.5pt;
+        font-weight: 700 !important;
+    }
+
+    body.print-card-preview .card-print-root .back-details {
+        padding: 3mm 3.2mm 2.4mm !important;
+    }
+
+    body.print-card-preview .card-print-root .back-row {
+        font-size: 6.5pt !important;
+        margin-bottom: 1.65mm !important;
+        font-weight: 700 !important;
+    }
+
+    body.print-card-preview .card-print-root .back-label {
+        padding: 0 1mm 0 0 !important;
+        vertical-align: middle !important;
+    }
+
+    body.print-card-preview .card-print-root .back-value {
+        padding: 0 0 0.25mm 1mm !important;
+        border-bottom-width: 0.2mm !important;
+        vertical-align: middle !important;
+    }
+
+    body.print-card-preview .card-print-root .back-notes {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding: 2.4mm 3mm 2mm !important;
+        font-size: 5.25pt !important;
+        line-height: 1.28 !important;
+        font-weight: 700 !important;
+    }
+
+    body.print-card-preview .card-print-root .back-notes p {
+        margin-bottom: 1.4mm !important;
+    }
+
+    body.print-card-preview .card-print-root .authority-container {
+        padding-top: 3mm !important;
+    }
+
+    body.print-card-preview .card-print-root .authority-text {
+        font-size: 5pt !important;
+        max-width: 56% !important;
+        font-weight: 700 !important;
+    }
+
+    body.print-card-preview .card-print-root .authority-sign img {
+        width: 14.5mm !important;
+    }
+
+    body.print-card-preview .card-print-root .sign-line {
+        width: 15.5mm !important;
+        border-top-width: 0.2mm !important;
+    }
+
+    body.print-card-preview .card-print-root .back-footer {
+        flex-shrink: 0 !important;
+        padding: 2.2mm 2.5mm 2.8mm !important;
+        font-size: 5pt !important;
+        line-height: 1.35 !important;
+        font-weight: 700 !important;
+    }
+
+    body.print-card-preview .card-print-root .back-footer p {
+        font-weight: 700 !important;
+    }
+
+    @page {
+        size: 54mm 85.6mm portrait;
+        margin: 0;
+    }
+}
+
+.card-print-root {
+    display: none;
+}

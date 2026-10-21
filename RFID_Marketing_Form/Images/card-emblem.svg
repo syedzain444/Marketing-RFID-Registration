@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" aria-hidden="true">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8a7344" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#8a7344" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="160" cy="160" r="150" fill="url(#g)"/>
+  <circle cx="160" cy="160" r="138" fill="none" stroke="#7a6538" stroke-width="2" opacity="0.45"/>
+  <circle cx="160" cy="160" r="118" fill="none" stroke="#7a6538" stroke-width="1.5" opacity="0.4"/>
+  <g fill="#7a6538" opacity="0.38">
+    <circle cx="160" cy="22" r="8"/>
+    <circle cx="160" cy="298" r="8"/>
+    <circle cx="22" cy="160" r="8"/>
+    <circle cx="298" cy="160" r="8"/>
+    <circle cx="58" cy="58" r="6"/>
+    <circle cx="262" cy="58" r="6"/>
+    <circle cx="58" cy="262" r="6"/>
+    <circle cx="262" cy="262" r="6"/>
+  </g>
+  <circle cx="160" cy="160" r="72" fill="none" stroke="#6f5c32" stroke-width="2" opacity="0.35"/>
+  <path d="M160 88 L172 128 L214 128 L180 152 L192 192 L160 168 L128 192 L140 152 L106 128 L148 128 Z" fill="#6f5c32" opacity="0.32"/>
+</svg>

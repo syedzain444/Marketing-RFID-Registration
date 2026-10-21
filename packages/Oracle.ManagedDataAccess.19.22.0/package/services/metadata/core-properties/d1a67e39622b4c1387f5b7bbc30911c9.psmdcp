@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:creator>Oracle</dc:creator>
+  <dc:description>ODP.NET, Managed Driver is a 100% native code .NET Framework driver for Oracle Database. No additional Oracle Client software is required to be installed to connect to Oracle Database.</dc:description>
+  <dc:identifier>Oracle.ManagedDataAccess</dc:identifier>
+  <version>19.22.0</version>
+  <keywords>ODP.NET Oracle DB database</keywords>
+  <lastModifiedBy>NuGet, Version=6.4.0.123, Culture=neutral, PublicKeyToken=31bf3856ad364e35;Microsoft Windows NT 6.3.9600.0;.NET Framework 4.7.2</lastModifiedBy>
+</coreProperties>
