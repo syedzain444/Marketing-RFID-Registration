@@ -38,27 +38,78 @@ namespace RFID_Marketing_Form.Data
             }
 
             var isFamily = IsTruthy(GetFormValue(context, "isFamilyCard"));
-            string uploadedPhotoPath;
-            PhotoStorage.TrySavePostedPhoto(context, out uploadedPhotoPath);
+            var familyOnly = IsTruthy(GetFormValue(context, "familyOnlyMode"));
+            string uploadedEmployeePhoto;
+            string uploadedFamilyPhoto;
+            PhotoStorage.TrySavePostedPhoto(context, "employeePhoto", out uploadedEmployeePhoto);
+            PhotoStorage.TrySavePostedPhoto(context, "familyPhoto", out uploadedFamilyPhoto);
 
             var repo = new RfidRepository();
             if (isFamily)
             {
                 var family = ReadFamilyInputFromRequest(context);
-                if (!string.IsNullOrWhiteSpace(uploadedPhotoPath))
+                var empInput = ReadInputFromRequest(context);
+                ApplyPhotoPath(
+                    family,
+                    uploadedFamilyPhoto,
+                    GetFormValue(context, "txtFamilyPhotoPath"));
+                if (!familyOnly)
                 {
-                    family.PhotoPath = uploadedPhotoPath;
+                    ApplyPhotoPath(
+                        empInput,
+                        uploadedEmployeePhoto,
+                        GetFormValue(context, "txtPhotoPath"));
+                }
+
+                var empExists = repo.EmployeeRecordExists(family.EmpId);
+                if (familyOnly)
+                {
+                    if (!empExists)
+                    {
+                        return SaveResult.FromIssues(
+                            "validation",
+                            "Some fields need attention",
+                            new List<FieldIssue>
+                            {
+                                new FieldIssue
+                                {
+                                    Key = "emp",
+                                    Message = "No RFID assignment exists for this Employee ID. Create the employee record first, or use New request with Family card to save both together."
+                                }
+                            });
+                    }
+
+                    return repo.SaveFamilyCard(family);
+                }
+
+                if (!empExists)
+                {
+                    var empResult = repo.Save(empInput);
+                    if (!empResult.Success)
+                    {
+                        return empResult;
+                    }
+
+                    var familyResult = repo.SaveFamilyCard(family);
+                    if (familyResult.Success && empResult.Messages != null && empResult.Messages.Count > 0)
+                    {
+                        if (familyResult.Messages == null)
+                        {
+                            familyResult.Messages = new List<string>();
+                        }
+
+                        familyResult.Messages.Insert(0, empResult.Messages[0]);
+                        familyResult.Title = "Employee and family card saved";
+                    }
+
+                    return familyResult;
                 }
 
                 return repo.SaveFamilyCard(family);
             }
 
             var input = ReadInputFromRequest(context);
-            if (!string.IsNullOrWhiteSpace(uploadedPhotoPath))
-            {
-                input.PhotoPathText = uploadedPhotoPath;
-                input.PhotoPath = uploadedPhotoPath;
-            }
+            ApplyPhotoPath(input, uploadedEmployeePhoto, GetFormValue(context, "txtPhotoPath"));
 
             if (string.IsNullOrWhiteSpace(input.EmpId))
             {
@@ -106,8 +157,30 @@ namespace RFID_Marketing_Form.Data
                 ForwardBy = GetFormValue(context, "txtForwardBy"),
                 ForwardOnText = GetFormValue(context, "txtForwardOn"),
                 RequesterRemarks = GetFormValue(context, "txtRequesterRemarks"),
-                PhotoPath = GetFormValue(context, "txtPhotoPath")
+                PhotoPath = GetFormValue(context, "txtFamilyPhotoPath")
             };
+        }
+
+        private static void ApplyPhotoPath(RfidInput input, string uploadedPath, string formPath)
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            var path = !string.IsNullOrWhiteSpace(uploadedPath) ? uploadedPath : formPath;
+            input.PhotoPathText = path ?? string.Empty;
+            input.PhotoPath = path ?? string.Empty;
+        }
+
+        private static void ApplyPhotoPath(FamilyCardInput input, string uploadedPath, string formPath)
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            input.PhotoPath = !string.IsNullOrWhiteSpace(uploadedPath) ? uploadedPath : (formPath ?? string.Empty);
         }
 
         public static Dictionary<string, object> BuildClientPayload(SaveResult result, bool resetAfterSuccess)

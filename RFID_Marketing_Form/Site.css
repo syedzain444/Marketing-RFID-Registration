@@ -473,3 +473,446 @@
 .card-print-root {
     display: none;
 }
+
+/* ============================================================
+   Employee family pass (landscape — from EmpFamilyCard.aspx)
+   ============================================================ */
+
+.family-card-container.preview-scaled {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0;
+    transform: scale(0.76);
+    transform-origin: top center;
+    margin: 0 auto -24px;
+    min-width: min-content;
+    width: 540px;
+}
+
+.family-card-container.preview-scaled .card-print-page.is-hidden {
+    display: none !important;
+}
+
+.family-id-card-aspect {
+    width: 540px;
+    height: 340px;
+    position: relative;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    color: #121212;
+    -webkit-font-smoothing: antialiased;
+}
+
+.family-id-card-front {
+    background: #e7a138;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 340px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.family-id-card-front p,
+.family-id-card-front h2,
+.family-id-card-front h3,
+.family-id-card-front span {
+    margin: 0;
+    padding: 0;
+}
+
+.family-card-watermark {
+    position: absolute;
+    right: -141px;
+    top: -1%;
+    width: 60%;
+    height: 80%;
+    opacity: 1.25;
+    pointer-events: none;
+    background: url(Images/Flogo.png) no-repeat right center / contain;
+}
+
+.family-id-card-front__header {
+    flex: 0 0 130px;
+    height: 130px;
+    min-height: 130px;
+    background: #1e385c;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 10;
+    border-bottom: 2px solid #b89768;
+    box-sizing: border-box;
+}
+
+.family-id-card-front__header img.logo-n {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin-top: -14px;
+    margin-left: -5px;
+}
+
+.family-id-card-front__titles {
+    text-align: right;
+    color: #fff;
+    line-height: 1.15;
+}
+
+.family-id-card-front__titles h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.15;
+}
+
+.family-id-card-front__titles-city {
+    text-align: center;
+}
+
+.family-id-card-front__titles h3 {
+    margin-top: 2px;
+    font-size: 18px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #e2e8f0;
+    text-align: center;
+}
+
+.family-id-card-front__middle {
+    position: relative;
+    flex: 0 0 60px;
+    height: 60px;
+    min-height: 60px;
+    z-index: 20;
+    flex-shrink: 0;
+}
+
+.family-id-card-front__photo-wrap {
+    position: absolute;
+    left: 60px;
+    top: -55px;
+    z-index: 30;
+}
+
+.family-id-card-front__photo {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e5e7eb;
+    border: 4px solid #1e385c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.family-id-card-front__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.family-id-card-front__identity {
+    position: absolute;
+    left: 170px;
+    top: 2px;
+    width: 350px;
+    max-width: calc(100% - 190px);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.family-id-card-front__name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #221c17;
+    line-height: 1.2;
+}
+
+.family-id-card-front__role {
+    margin-top: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #221c17;
+}
+
+.family-id-card-front__divider {
+    flex: 0 0 auto;
+    margin: 0 20px;
+    border-top: 1px solid rgba(184, 152, 108, 0.7);
+    position: relative;
+    z-index: 10;
+}
+
+.family-id-card-front__footer {
+    flex: 0 0 120px;
+    height: 120px;
+    min-height: 120px;
+    padding: 6px 24px 12px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: stretch;
+    color: #2a241e;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.family-id-card-front__col-left {
+    width: 38%;
+    padding-right: 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+}
+
+.family-id-card-front__col-right {
+    width: 62%;
+    padding-left: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.family-id-card-front__row {
+    display: flex;
+    flex-direction: column;
+}
+
+.family-id-card-front__col-left .family-id-card-front__row {
+    gap: 4px;
+}
+
+.family-id-card-front__col-right .family-id-card-front__row {
+    gap: 2px;
+}
+
+.family-id-card-front__vrule {
+    flex: 0 0 1px;
+    width: 1px;
+    background: rgba(168, 137, 94, 0.8);
+    margin: 4px 0;
+    align-self: stretch;
+}
+
+.family-id-card-front__label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #4a3f35;
+    line-height: 1;
+}
+
+.family-id-card-front__col-left .family-id-card-front__value {
+    margin-top: 4px;
+}
+
+.family-id-card-front__col-right .family-id-card-front__value {
+    margin-top: 2px;
+}
+
+.family-id-card-front__value {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a140e;
+    line-height: 1.15;
+}
+
+.family-id-card-back {
+    background: #e7a138;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.family-id-card-back.is-visible {
+    display: block;
+}
+
+.family-id-card-front.is-hidden {
+    display: none;
+}
+
+.family-id-card-back__wm {
+    position: absolute;
+    right: -80px;
+    top: 24%;
+    width: 150px;
+    height: 150px;
+    opacity: 1.25;
+    pointer-events: none;
+    background: url(Images/Flogo.png) no-repeat center / contain;
+}
+
+.family-id-card-back__bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 28px;
+    background: #1e385c;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 18px;
+    box-sizing: border-box;
+    border-radius: 16px 16px 0 0;
+}
+
+.family-id-card-back__bar span {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+}
+
+.family-id-card-back__body {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    padding-top: 28px;
+    box-sizing: border-box;
+}
+
+.family-id-card-back__left,
+.family-id-card-back__right {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 28px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.family-id-card-back__left img.logo-b {
+    height: 5rem;
+    width: auto;
+    object-fit: contain;
+}
+
+.family-id-card-back__left p,
+.family-id-card-back__right p,
+.family-id-card-back__right li {
+    font-size: 12px;
+    font-weight: 700;
+    color: #2a241e;
+    margin: 0;
+    line-height: 1.25;
+}
+
+.family-id-card-back__right ul {
+    list-style: disc;
+    padding-left: 16px;
+    margin: 0;
+    align-self: flex-start;
+    text-align: left;
+}
+
+.family-id-card-back__qr {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    mix-blend-mode: darken;
+}
+
+.family-id-card-back__sign {
+    height: 5rem;
+    object-fit: contain;
+}
+
+.family-id-card-back__vrule {
+    width: 1.5px;
+    background: rgba(106, 90, 58, 0.6);
+    margin: 16px 0;
+}
+
+.family-preview-side-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.family-preview-side-toggle button {
+    border: 1px solid #cfd9d7;
+    background: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.family-preview-side-toggle button.is-active {
+    background: #007272;
+    color: #fff;
+    border-color: #007272;
+}
+
+@media print {
+    body.print-family-card-preview > *:not(.card-print-root) {
+        display: none !important;
+    }
+
+    body.print-family-card-preview .card-print-root {
+        display: block !important;
+        width: 540px;
+        margin: 0 auto;
+    }
+
+    body.print-family-card-preview .card-print-page--family-front,
+    body.print-family-card-preview .card-print-page--family-back {
+        width: 540px;
+        height: 340px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    body.print-family-card-preview .card-print-page--family-front {
+        page-break-after: always;
+        break-after: page;
+    }
+
+    body.print-family-card-preview .family-id-card-aspect {
+        width: 540px !important;
+        height: 340px !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body.print-family-card-preview .family-id-card-back,
+    body.print-family-card-preview .family-id-card-front {
+        display: block !important;
+    }
+
+    @page {
+        size: 540px 340px;
+        margin: 0;
+    }
+}

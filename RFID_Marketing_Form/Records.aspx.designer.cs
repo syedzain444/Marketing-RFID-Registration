@@ -6,6 +6,7 @@ namespace RFID_Marketing_Form
         protected global::RFID_Marketing_Form.Controls.MarketingSidebar marketingSidebar;
         protected global::System.Web.UI.HtmlControls.HtmlGenericControl recordsUserLabel;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor lnkNewRequest;
+        protected global::System.Web.UI.HtmlControls.HtmlAnchor lnkAddFamily;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor lnkAdmin;
     }
 }

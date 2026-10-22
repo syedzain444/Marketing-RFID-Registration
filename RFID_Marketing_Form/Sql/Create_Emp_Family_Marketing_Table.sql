@@ -1,17 +1,31 @@
--- SPERS.EMP_FAMILY_MARKETING — employee dependent / family RFID cards
--- Links to primary employee in SPERS.RFID_CARD_ASSIGN_MARKETING via EMP_ID.
--- Card display ID format: {EMP_ID}-{DEPENDENT_ID}  e.g. 25130-2
--- Oracle 11g+. Run as SPERS or a user with CREATE TABLE / SEQUENCE privilege.
+-- SPERS.EMP_FAMILY_MARKETING — NEW empty database only.
+-- If you get ORA-00955 (table already exists), STOP and run:
+--   Upgrade_Emp_Family_Marketing_Table.sql
+-- or (simple) Add_Emp_Family_Marketing_Columns.sql then Upgrade.
 
--- Optional: drop for clean re-run (comment out in production)
--- DROP TABLE SPERS.EMP_FAMILY_MARKETING CASCADE CONSTRAINTS;
--- DROP SEQUENCE SPERS.EMP_FAMILY_MARKETING_SEQ;
+SET SERVEROUTPUT ON;
 
-CREATE SEQUENCE SPERS.EMP_FAMILY_MARKETING_SEQ
-  START WITH 1
-  INCREMENT BY 1
-  NOCACHE
-  NOCYCLE;
+DECLARE
+  v_n NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_n FROM all_tables WHERE table_name = 'EMP_FAMILY_MARKETING';
+  IF v_n > 0 THEN
+    RAISE_APPLICATION_ERROR(
+      -20002,
+      'EMP_FAMILY_MARKETING already exists. Run Upgrade_Emp_Family_Marketing_Table.sql — do NOT run CREATE TABLE again.'
+    );
+  END IF;
+END;
+/
+
+BEGIN
+  EXECUTE IMMEDIATE
+    'CREATE SEQUENCE SPERS.EMP_FAMILY_MARKETING_SEQ START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE';
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE != -955 THEN RAISE; END IF;
+END;
+/
 
 CREATE TABLE SPERS.EMP_FAMILY_MARKETING (
   ID                 NUMBER          NOT NULL,
@@ -54,7 +68,7 @@ COMMENT ON TABLE SPERS.EMP_FAMILY_MARKETING IS
 COMMENT ON COLUMN SPERS.EMP_FAMILY_MARKETING.EMP_ID IS
   'Primary employee ID (must exist on employee RFID assignment).';
 COMMENT ON COLUMN SPERS.EMP_FAMILY_MARKETING.DEPENDENT_ID IS
-  'Sequence per employee: 1, 2, 3… used in CARD_ID.';
+  'Sequence per employee: 1, 2, 3 used in CARD_ID.';
 COMMENT ON COLUMN SPERS.EMP_FAMILY_MARKETING.CARD_ID IS
   'Printed card ID, typically EMP_ID || ''-'' || DEPENDENT_ID.';
 COMMENT ON COLUMN SPERS.EMP_FAMILY_MARKETING.CARD_NAME IS

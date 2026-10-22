@@ -3,6 +3,7 @@ var RfidForm = (function () {
     var submitted = false;
     var saveLabel = "Save Record";
     var photoObjectUrl = null;
+    var photoObjectUrls = { employee: null, family: null };
     var captchaKey = null;
     var pendingSaveBtn = null;
     var config = {
@@ -10,6 +11,9 @@ var RfidForm = (function () {
         onSaveSuccess: null
     };
     var activeFormTab = "employee";
+    var formMode = "default";
+    var empLookupTimer = null;
+    var recordsLookupUrl = null;
 
     function val(id) {
         var el = document.getElementById(id);
@@ -167,13 +171,132 @@ var RfidForm = (function () {
     }
 
     function isFamilyMode() {
+        if (formMode === "familyOnly") return true;
         var chk = document.getElementById("chkFamilyCard");
         return !!(chk && chk.checked);
+    }
+
+    function isFamilyOnlyMode() {
+        return formMode === "familyOnly";
+    }
+
+    function setRecordsLookupUrl(url) {
+        recordsLookupUrl = url || null;
+    }
+
+    function applyFormMode() {
+        var root = document.querySelector(".new-request-form");
+        if (root) root.classList.toggle("is-family-only", isFamilyOnlyMode());
+
+        var toggleBar = document.getElementById("familyToggleBar");
+        if (toggleBar) toggleBar.classList.toggle("is-hidden", isFamilyOnlyMode());
+
+        var onlyIntro = document.getElementById("nrFamilyOnlyIntro");
+        if (onlyIntro) onlyIntro.classList.toggle("is-hidden", !isFamilyOnlyMode());
+
+        var panelIntro = document.getElementById("nrFamilyPanelIntro");
+        if (panelIntro) panelIntro.classList.toggle("is-hidden", isFamilyOnlyMode());
+
+        var badge = document.getElementById("nrFamilyPanelBadge");
+        if (badge && !isFamilyOnlyMode()) {
+            badge.textContent = isFamilyMode() ? "New employee: complete Employee tab too" : "Fill employee tab first for new hires";
+        }
+
+        var chk = document.getElementById("chkFamilyCard");
+        if (chk) {
+            if (isFamilyOnlyMode()) {
+                chk.checked = true;
+                chk.disabled = true;
+            } else {
+                chk.disabled = false;
+            }
+        }
+
+        var saveBtn = document.getElementById("btnNewRequestSave");
+        if (saveBtn) {
+            saveBtn.textContent = isFamilyOnlyMode() ? "Save family card" : "Save record";
+        }
+
+        var heroTitle = document.getElementById("newRequestHeroTitle");
+        if (heroTitle && isFamilyOnlyMode()) heroTitle.textContent = "Add family card";
+        else if (heroTitle && !isFamilyMode()) heroTitle.textContent = "New assignment";
+
+        syncFamilyMode();
+        if (isFamilyOnlyMode()) setFormTab("family", false);
+        clearEmpLookupHint();
+        syncPhotoBrowseCaption();
+        updatePassPhoto();
+    }
+
+    function clearEmpLookupHint() {
+        var hint = document.getElementById("nrEmpLookupHint");
+        if (!hint) return;
+        hint.textContent = "";
+        hint.classList.add("is-hidden");
+        hint.classList.remove("is-found", "is-missing");
+    }
+
+    function scheduleEmpLookup() {
+        if (!isFamilyOnlyMode() || !recordsLookupUrl) return;
+        if (empLookupTimer) clearTimeout(empLookupTimer);
+        empLookupTimer = setTimeout(runEmpLookup, 350);
+    }
+
+    function runEmpLookup() {
+        empLookupTimer = null;
+        var hint = document.getElementById("nrEmpLookupHint");
+        if (!hint || !recordsLookupUrl) return;
+        var emp = val("txtEmpId");
+        if (!emp) {
+            clearEmpLookupHint();
+            return;
+        }
+        hint.textContent = "Checking employee ID…";
+        hint.classList.remove("is-hidden", "is-found", "is-missing");
+        fetch(recordsLookupUrl + (recordsLookupUrl.indexOf("?") >= 0 ? "&" : "?") + "action=lookupemp&empId=" + encodeURIComponent(emp), {
+            cache: "no-store",
+            credentials: "same-origin"
+        })
+            .then(function (res) {
+                return res.json();
+            })
+            .then(function (data) {
+                if (!data || !data.Ok) {
+                    hint.textContent = "Could not verify employee ID.";
+                    hint.classList.add("is-missing");
+                    return;
+                }
+                if (data.Exists) {
+                    hint.textContent = data.EmployeeName
+                        ? "Employee on file: " + data.EmployeeName
+                        : "Employee ID found in RFID assignments.";
+                    hint.classList.add("is-found");
+                } else {
+                    hint.textContent = "No RFID assignment for this ID. Use New request to create the employee first.";
+                    hint.classList.add("is-missing");
+                }
+            })
+            .catch(function () {
+                hint.textContent = "Could not verify employee ID.";
+                hint.classList.add("is-missing");
+            });
     }
 
     function getHeroPreviewTab() {
         if (!isFamilyMode()) return "employee";
         return activeFormTab;
+    }
+
+    function activePhotoContext() {
+        if (isFamilyOnlyMode()) return "family";
+        if (isFamilyMode() && activeFormTab === "family") return "family";
+        return "employee";
+    }
+
+    function syncPhotoBrowseCaption() {
+        var cap = document.getElementById("photoBrowseCaption");
+        if (!cap) return;
+        cap.textContent = activePhotoContext() === "family" ? "Family photo" : "Employee photo";
     }
 
     function setFormTab(tab, animate) {
@@ -224,6 +347,8 @@ var RfidForm = (function () {
         updateFamilyCardIdPreview();
         refreshNewRequestHero();
         refreshMeter();
+        syncPhotoBrowseCaption();
+        updatePassPhoto();
     }
 
     function syncFamilyMode() {
@@ -257,7 +382,13 @@ var RfidForm = (function () {
     function onFamilyToggleChange() {
         var on = isFamilyMode();
         syncFamilyMode();
+        var badge = document.getElementById("nrFamilyPanelBadge");
+        if (badge && !isFamilyOnlyMode()) {
+            badge.textContent = on ? "New employee: complete Employee tab too" : "Fill employee tab first for new hires";
+        }
         if (on) setFormTab("family", true);
+        syncPhotoBrowseCaption();
+        updatePassPhoto();
     }
 
     function updateFamilyCardIdPreview() {
@@ -396,16 +527,22 @@ var RfidForm = (function () {
         setRadio("rblForward", "N");
         setRadio("rblApproved", "");
         var famChk = document.getElementById("chkFamilyCard");
-        if (famChk) famChk.checked = false;
-        activeFormTab = "employee";
-        ["txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyRfidNumber", "txtFamilyCardIdPreview"].forEach(function (id) {
+        if (famChk) {
+            famChk.checked = isFamilyOnlyMode();
+            if (!isFamilyOnlyMode()) famChk.disabled = false;
+        }
+        activeFormTab = isFamilyOnlyMode() ? "family" : "employee";
+        ["txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyRfidNumber", "txtFamilyCardIdPreview", "txtFamilyPhotoPath"].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.value = "";
         });
         syncFamilyMode();
+        applyFormMode();
         revokePhotoObjectUrl();
-        var pick = document.getElementById("filePhotoPick");
-        if (pick) pick.value = "";
+        var pickEmp = document.getElementById("filePhotoPick");
+        var pickFam = document.getElementById("filePhotoPickFamily");
+        if (pickEmp) pickEmp.value = "";
+        if (pickFam) pickFam.value = "";
         closeCaptchaModal();
         setHiddenField("captchaKey", "");
         setHiddenField("captchaAnswer", "");
@@ -531,22 +668,23 @@ var RfidForm = (function () {
         updatePassPhoto();
     }
 
+    function resolvePhotoDisplaySrc(path, objectUrl) {
+        if (objectUrl) return objectUrl;
+        path = (path || "").trim();
+        if (!path || path === "Uploading…") return "";
+        if (window.RfidPhotos) return window.RfidPhotos.displayUrl(path);
+        if (/^https?:\/\//i.test(path)) return path;
+        var p = path.replace(/\\/g, "/").replace(/^\/+/, "");
+        return p ? "EmpPhoto.ashx?p=" + encodeURIComponent(p) : "";
+    }
+
     function updatePassPhoto() {
         var img = document.getElementById("imgEmpPhoto");
         var ph = document.getElementById("passPhotoPlaceholder");
         if (!img) return;
-        var src = photoObjectUrl;
-        if (!src) {
-            var path = val("txtPhotoPath");
-            if (window.RfidPhotos) {
-                src = window.RfidPhotos.displayUrl(path);
-            } else if (/^https?:\/\//i.test(path)) {
-                src = path;
-            } else if (path) {
-                var p = path.replace(/\\/g, "/").replace(/^\/+/, "");
-                src = "EmpPhoto.ashx?p=" + encodeURIComponent(p);
-            }
-        }
+        var ctx = activePhotoContext();
+        var path = ctx === "family" ? val("txtFamilyPhotoPath") : val("txtPhotoPath");
+        var src = resolvePhotoDisplaySrc(path, photoObjectUrls[ctx]);
         if (src) {
             img.onload = function () {
                 img.classList.remove("is-hidden");
@@ -569,11 +707,68 @@ var RfidForm = (function () {
         }
     }
 
-    function revokePhotoObjectUrl() {
-        if (photoObjectUrl) {
-            URL.revokeObjectURL(photoObjectUrl);
-            photoObjectUrl = null;
+    function revokePhotoObjectUrl(which) {
+        if (which) {
+            if (photoObjectUrls[which]) {
+                URL.revokeObjectURL(photoObjectUrls[which]);
+                photoObjectUrls[which] = null;
+            }
+            return;
         }
+        revokePhotoObjectUrl("employee");
+        revokePhotoObjectUrl("family");
+        photoObjectUrl = null;
+    }
+
+    function bindPhotoFileInput(pickEl, context) {
+        if (!pickEl) return;
+        pickEl.addEventListener("change", function () {
+            revokePhotoObjectUrl(context);
+            var file = pickEl.files && pickEl.files[0];
+            var pathBox = document.getElementById(context === "family" ? "txtFamilyPhotoPath" : "txtPhotoPath");
+            if (!file) {
+                updatePassPhoto();
+                return;
+            }
+            photoObjectUrls[context] = URL.createObjectURL(file);
+            if (activePhotoContext() === context) updatePassPhoto();
+            if (pathBox) pathBox.value = "Uploading…";
+            function finishPath(path) {
+                if (pathBox) pathBox.value = path || "";
+                if (photoObjectUrls[context]) {
+                    revokePhotoObjectUrl(context);
+                }
+                if (activePhotoContext() === context) updatePassPhoto();
+                onEdit();
+            }
+            if (window.RfidPhotos && window.RfidPhotos.uploadFile) {
+                window.RfidPhotos.uploadFile(file).then(function (data) {
+                    if (data && data.ok && data.path) {
+                        finishPath(data.path);
+                        return;
+                    }
+                    finishPath("Photos/" + file.name);
+                    if (typeof Swal !== "undefined") {
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Photo not uploaded",
+                            text: (data && data.error) || "Save the file into Photos manually or try again."
+                        });
+                    }
+                }).catch(function () {
+                    finishPath("Photos/" + file.name);
+                    if (typeof Swal !== "undefined") {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Photo upload failed",
+                            text: "Check that PhotoUpload.ashx is reachable, then try Browse again."
+                        });
+                    }
+                });
+            } else {
+                finishPath("Photos/" + file.name);
+            }
+        });
     }
 
     function syncConditional() {
@@ -720,18 +915,24 @@ var RfidForm = (function () {
         fd.append("rblForward", radioValue("rblForward"));
         fd.append("rblApproved", radioValue("rblApproved"));
         fd.append("isFamilyCard", isFamilyMode() ? "Y" : "N");
+        fd.append("familyOnlyMode", isFamilyOnlyMode() ? "Y" : "N");
         fd.append("txtFamilyCardName", val("txtFamilyCardName"));
         fd.append("txtFamilyRelationship", val("txtFamilyRelationship"));
         fd.append("txtFamilyCnic", val("txtFamilyCnic"));
         fd.append("txtFamilyRfidNumber", val("txtFamilyRfidNumber"));
+        fd.append("txtFamilyPhotoPath", val("txtFamilyPhotoPath"));
         var form = document.getElementById("form1");
         var keyEl = form ? form.querySelector('input[type="hidden"][name="captchaKey"]') : null;
         var ansEl = form ? form.querySelector('input[type="hidden"][name="captchaAnswer"]') : null;
         fd.append("captchaKey", keyEl ? keyEl.value : "");
         fd.append("captchaAnswer", ansEl ? ansEl.value : "");
-        var pick = document.getElementById("filePhotoPick");
-        if (pick && pick.files && pick.files[0]) {
-            fd.append("employeePhoto", pick.files[0]);
+        var pickEmp = document.getElementById("filePhotoPick");
+        var pickFam = document.getElementById("filePhotoPickFamily");
+        if (pickEmp && pickEmp.files && pickEmp.files[0]) {
+            fd.append("employeePhoto", pickEmp.files[0]);
+        }
+        if (pickFam && pickFam.files && pickFam.files[0]) {
+            fd.append("familyPhoto", pickFam.files[0]);
         }
         return fd;
     }
@@ -874,50 +1075,34 @@ var RfidForm = (function () {
         if (famChk) famChk.addEventListener("change", onFamilyToggleChange);
         var tabEmp = document.getElementById("nrTabEmployee");
         var tabFam = document.getElementById("nrTabFamily");
-        if (tabEmp) tabEmp.addEventListener("click", function () { if (isFamilyMode()) setFormTab("employee", true); });
-        if (tabFam) tabFam.addEventListener("click", function () { if (isFamilyMode()) setFormTab("family", true); });
-        var pick = document.getElementById("filePhotoPick");
-        if (pick) {
-            pick.addEventListener("change", function () {
-                revokePhotoObjectUrl();
-                var file = pick.files && pick.files[0];
-                if (!file) {
-                    updatePassPhoto();
-                    return;
-                }
-                photoObjectUrl = URL.createObjectURL(file);
-                updatePassPhoto();
-                var pathBox = document.getElementById("txtPhotoPath");
-                if (pathBox) {
-                    pathBox.value = "Uploading…";
-                }
-                if (window.RfidPhotos && window.RfidPhotos.uploadFile) {
-                    window.RfidPhotos.uploadFile(file).then(function (data) {
-                        if (data && data.ok && data.path) {
-                            if (pathBox) pathBox.value = data.path;
-                            revokePhotoObjectUrl();
-                            updatePassPhoto();
-                            onEdit();
-                            return;
-                        }
-                        if (pathBox) pathBox.value = "Photos/" + file.name;
-                        if (typeof Swal !== "undefined") {
-                            Swal.fire({ icon: "warning", title: "Photo not uploaded", text: (data && data.error) || "Save the file into Photos manually or try again." });
-                        }
-                        onEdit();
-                    }).catch(function () {
-                        if (pathBox) pathBox.value = "Photos/" + file.name;
-                        if (typeof Swal !== "undefined") {
-                            Swal.fire({ icon: "error", title: "Photo upload failed", text: "Check that PhotoUpload.ashx is reachable, then try Browse again." });
-                        }
-                        onEdit();
-                    });
-                } else if (pathBox) {
-                    pathBox.value = "Photos/" + file.name;
-                    onEdit();
-                }
+        if (tabEmp) {
+            tabEmp.addEventListener("click", function () {
+                if (isFamilyMode()) setFormTab("employee", true);
             });
         }
+        if (tabFam) {
+            tabFam.addEventListener("click", function () {
+                if (isFamilyMode()) setFormTab("family", true);
+            });
+        }
+        var btnPhotoBrowse = document.getElementById("btnPhotoBrowse");
+        if (btnPhotoBrowse) {
+            btnPhotoBrowse.addEventListener("click", function () {
+                var ctx = activePhotoContext();
+                var pick = document.getElementById(ctx === "family" ? "filePhotoPickFamily" : "filePhotoPick");
+                if (pick) pick.click();
+            });
+        }
+        var empInput = document.getElementById("txtEmpId");
+        if (empInput) {
+            empInput.addEventListener("input", function () {
+                updateFamilyCardIdPreview();
+                scheduleEmpLookup();
+            });
+            empInput.addEventListener("blur", runEmpLookup);
+        }
+        bindPhotoFileInput(document.getElementById("filePhotoPick"), "employee");
+        bindPhotoFileInput(document.getElementById("filePhotoPickFamily"), "family");
         var asideSave = document.getElementById("btnSaveAside");
         if (asideSave) {
             asideSave.addEventListener("click", function () {
@@ -965,11 +1150,20 @@ var RfidForm = (function () {
         if (!opts) return;
         if (opts.ajaxSaveUrl) config.ajaxSaveUrl = opts.ajaxSaveUrl;
         if (opts.onSaveSuccess) config.onSaveSuccess = opts.onSaveSuccess;
+        if (opts.recordsLookupUrl) setRecordsLookupUrl(opts.recordsLookupUrl);
+    }
+
+    function openWithMode(mode) {
+        formMode = mode === "familyOnly" ? "familyOnly" : "default";
+        resetFormValues();
+        if (isFamilyOnlyMode() && val("txtEmpId")) runEmpLookup();
+        refreshNewRequestHero();
     }
 
     function init() {
         bind();
         syncFamilyMode();
+        syncPhotoBrowseCaption();
         onEdit();
         flushPendingSaveResult();
     }
@@ -984,6 +1178,7 @@ var RfidForm = (function () {
         init: init,
         configure: configure,
         boot: boot,
+        openWithMode: openWithMode,
         validateBeforeSubmit: validateBeforeSubmit,
         dismissBanner: dismissBanner,
         handleSaveResult: handleSaveResult,

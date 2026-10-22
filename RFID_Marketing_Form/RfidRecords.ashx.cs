@@ -99,6 +99,20 @@ namespace RFID_Marketing_Form
                         context.Request["rfidNumber"]);
                 }
             }
+            else if (action == "lookupemp")
+            {
+                var empId = (context.Request.QueryString["empId"] ?? context.Request.Form["empId"] ?? string.Empty).Trim();
+                var exists = !string.IsNullOrWhiteSpace(empId) && repo.EmployeeRecordExists(empId);
+                var displayName = exists ? repo.TryGetEmployeeDisplayName(empId) : null;
+                context.Response.Write(new JavaScriptSerializer().Serialize(new
+                {
+                    Ok = true,
+                    Exists = exists,
+                    EmpId = empId,
+                    EmployeeName = displayName ?? string.Empty
+                }));
+                return;
+            }
                 else
                 {
                     result = repo.ListRecords();
@@ -164,6 +178,21 @@ namespace RFID_Marketing_Form
                         {
                             AppPermissionCodes.ActionRecordsPrint,
                             AppPermissionCodes.ActionRecordsEdit
+                        },
+                        out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                case "lookupemp":
+                    if (!MarketingAuthContext.TryRequireAnyPermission(
+                        context,
+                        new[]
+                        {
+                            AppPermissionCodes.ScreenForm,
+                            AppPermissionCodes.ActionFormSave
                         },
                         out err))
                     {

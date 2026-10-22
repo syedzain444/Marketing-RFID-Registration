@@ -69,3 +69,7 @@ D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain-2.jpeg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csprojResolveAssemblyReference.cache
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\0ef667fe-b98a-421a-b6dd-3737df78c870_removalai_preview.png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Bahira-Logo (1).png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\daniel-leone-v7daTKlZzaw-unsplash.jpg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\BTK LOGO.png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\551324.jpg

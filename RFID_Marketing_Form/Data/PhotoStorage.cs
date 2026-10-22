@@ -203,26 +203,23 @@ namespace RFID_Marketing_Form.Data
 
         public static bool TrySavePostedPhoto(HttpContext context, out string relativePath)
         {
+            return TrySavePostedPhoto(context, "employeePhoto", out relativePath);
+        }
+
+        public static bool TrySavePostedPhoto(HttpContext context, string fieldName, out string relativePath)
+        {
             relativePath = null;
             if (context == null || context.Request == null || context.Request.Files == null)
             {
                 return false;
             }
 
-            HttpPostedFile upload = context.Request.Files["employeePhoto"];
-            if (upload == null || upload.ContentLength <= 0)
+            if (string.IsNullOrWhiteSpace(fieldName))
             {
-                for (int i = 0; i < context.Request.Files.Count; i++)
-                {
-                    var candidate = context.Request.Files[i];
-                    if (candidate != null && candidate.ContentLength > 0 && !string.IsNullOrWhiteSpace(candidate.FileName))
-                    {
-                        upload = candidate;
-                        break;
-                    }
-                }
+                fieldName = "employeePhoto";
             }
 
+            HttpPostedFile upload = context.Request.Files[fieldName];
             if (upload == null || upload.ContentLength <= 0)
             {
                 return false;

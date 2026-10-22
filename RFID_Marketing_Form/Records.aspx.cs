@@ -35,6 +35,7 @@ namespace RFID_Marketing_Form
 
             recordsUserLabel.InnerText = UserLabel;
             lnkNewRequest.Visible = Can(AppPermissionCodes.ScreenForm);
+            lnkAddFamily.Visible = Can(AppPermissionCodes.ScreenForm);
             lnkAdmin.Visible = Can(AppPermissionCodes.ScreenAdmin);
 
             SetMarketingNav(marketingSidebar, MarketingNavSection.Records);

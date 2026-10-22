@@ -102,6 +102,22 @@ namespace RFID_Marketing_Form.Data
         public string PhotoPath { get; set; }
     }
 
+    public class FamilyCardRecord
+    {
+        public decimal Id { get; set; }
+        public string EmpId { get; set; }
+        public decimal DependentId { get; set; }
+        public string CardId { get; set; }
+        public string CardName { get; set; }
+        public string Relationship { get; set; }
+        public string Cnic { get; set; }
+        public string RfidNumber { get; set; }
+        public string IssueDate { get; set; }
+        public string ExpiryDate { get; set; }
+        public string PhotoPath { get; set; }
+        public string Status { get; set; }
+    }
+
     public class RfidRecordsResult
     {
         public bool Ok { get; set; }
@@ -109,6 +125,7 @@ namespace RFID_Marketing_Form.Data
         public string TableName { get; set; }
         public List<RfidRecord> Records { get; set; }
         public RfidRecord Record { get; set; }
+        public List<FamilyCardRecord> FamilyCards { get; set; }
         public string Status { get; set; }
         public string StatusRemarks { get; set; }
 

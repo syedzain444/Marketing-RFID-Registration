@@ -194,6 +194,9 @@
     <Content Include="Images\logo.png" />
     <Content Include="Images\LogoB.png" />
     <Content Include="Images\logoN.png" />
+    <Content Include="Images\Flogo.png" />
+    <Content Include="Images\signature.png" />
+    <Content Include="Images\Signature.png" />
     <Content Include="Images\logo-mono.png" />
     <Content Include="Images\accent.png" />
     <Content Include="Images\bullet.png" />

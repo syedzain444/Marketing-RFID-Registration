@@ -11,11 +11,13 @@
                     </svg>
                 </div>
             </div>
-            <label class="new-request-photo-browse">
-                Photo
-                <input type="file" id="filePhotoPick" name="employeePhoto" class="visually-hidden" accept="image/*" />
-            </label>
+            <button type="button" class="new-request-photo-browse" id="btnPhotoBrowse">
+                <span id="photoBrowseCaption">Employee photo</span>
+            </button>
+            <input type="file" id="filePhotoPick" name="employeePhoto" class="visually-hidden" accept="image/*" tabindex="-1" aria-hidden="true" />
+            <input type="file" id="filePhotoPickFamily" name="familyPhoto" class="visually-hidden" accept="image/*" tabindex="-1" aria-hidden="true" />
             <input type="text" id="txtPhotoPath" maxlength="500" class="visually-hidden" tabindex="-1" aria-hidden="true" />
+            <input type="text" id="txtFamilyPhotoPath" maxlength="500" class="visually-hidden" tabindex="-1" aria-hidden="true" />
         </div>
         <div class="detail-mini__head">
             <p class="detail-mini__eyebrow" id="newRequestHeroEyebrow">New RFID card request</p>
@@ -32,7 +34,7 @@
         <div class="new-request-family-toggle nr-toolbar__toggle" id="familyToggleBar">
             <div class="new-request-family-toggle__copy">
                 <strong class="new-request-family-toggle__title">Family card</strong>
-                <p class="new-request-family-toggle__hint">Link a dependent to an employee on file</p>
+                <p class="new-request-family-toggle__hint">Save a new employee and family together, or add family to someone already on file</p>
             </div>
             <label class="family-switch" for="chkFamilyCard">
                 <input type="checkbox" id="chkFamilyCard" class="family-switch__input" />
@@ -93,7 +95,9 @@
                 </div>
             </section>
             <section class="nr-panel nr-panel--family" id="nrPanelFamily" role="tabpanel" aria-labelledby="nrTabFamily" hidden="hidden" aria-hidden="true">
-                <p class="nr-family-panel__intro">Dependent card <span class="nr-family-panel__badge">Employee must exist in RFID assignments</span></p>
+                <p id="nrFamilyOnlyIntro" class="nr-family-only-intro is-hidden">Enter an employee ID that is already in RFID assignments, then complete the dependent details below.</p>
+                <p class="nr-family-panel__intro" id="nrFamilyPanelIntro">Dependent card <span class="nr-family-panel__badge" id="nrFamilyPanelBadge">Fill employee tab first for new hires</span></p>
+                <p id="nrEmpLookupHint" class="nr-emp-lookup-hint is-hidden" aria-live="polite"></p>
                 <div class="detail-fit-grid new-request-grid new-request-grid--dense new-request-grid--family" id="nrFamilyFields">
                     <div class="detail-cell detail-cell--field field" data-field="familyName">
                         <label class="detail-field-label" for="txtFamilyCardName">Card holder name <span class="req">*</span></label>

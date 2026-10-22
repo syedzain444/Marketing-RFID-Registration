@@ -665,6 +665,98 @@
         );
     }
 
+    function formatFamilyCardDate(v) {
+        if (v == null || String(v).trim() === "" || String(v).trim() === "—") return "—";
+        var iso = displayDateToIso(v);
+        if (!iso) return String(v).trim();
+        var p = iso.split("-");
+        if (p.length !== 3) return String(v).trim();
+        return p[2] + "/" + p[1] + "/" + p[0];
+    }
+
+    function formatRelationshipLabel(rel) {
+        if (!rel || !String(rel).trim()) return "FAMILY";
+        return String(rel).trim().replace(/_/g, " ").toUpperCase();
+    }
+
+    function familyQrUrl(family) {
+        var text =
+            "Name: " + (family.CardName || "") +
+            "\nCNIC: " + (family.Cnic || "") +
+            "\nEmp ID: " + (family.EmpId || "") +
+            "\nRelation: " + formatRelationshipLabel(family.Relationship);
+        return "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(text);
+    }
+
+    function renderFamilyIdCardBlock(family) {
+        var root = appRoot();
+        var logoN = root + "Images/logoN.png";
+        var logoB = root + "Images/LogoB.png";
+        var sign = root + "Images/signature.png";
+        var fallbackLogo = root + "Images/logo.png";
+        var photoUrl = resolvePhotoUrl(family.PhotoPath);
+        var fallback = window.RfidPhotos ? window.RfidPhotos.publicUrl(family.PhotoPath) : "";
+        var name = family.CardName ? String(family.CardName).toUpperCase() : "—";
+        var role = formatRelationshipLabel(family.Relationship);
+        var img =
+            photoUrl
+                ? ('<img src="' + esc(photoUrl) + '" alt="" data-fallback="' + esc(fallback) + '" ' +
+                    'onerror="if(this.dataset.fallback&&!this.dataset.tried){this.dataset.tried=1;this.src=this.dataset.fallback;}" />')
+                : "";
+
+        function detailRow(label, value) {
+            return (
+                '<div class="family-id-card-front__row">' +
+                '<span class="family-id-card-front__label">' + esc(label) + "</span>" +
+                '<span class="family-id-card-front__value">' + esc(value) + "</span></div>"
+            );
+        }
+
+        return (
+            '<div id="printCardPreviewAreaFamily" class="family-card-container preview-scaled">' +
+            '<div class="card-print-page card-print-page--family-front">' +
+            '<div class="family-id-card-aspect family-id-card-front family-id-card-front-side">' +
+            '<div class="family-card-watermark" aria-hidden="true"></div>' +
+            '<div class="family-id-card-front__header">' +
+            '<img class="logo-n" src="' + esc(logoN) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackLogo) + "';\" />" +
+            '<div class="family-id-card-front__titles">' +
+            "<h2>BAHRIA TOWN</h2><h2 class=\"family-id-card-front__titles-city\">KARACHI</h2><h3>EMPLOYEE FAMILY</h3></div></div>" +
+            '<div class="family-id-card-front__middle">' +
+            '<div class="family-id-card-front__photo-wrap"><div class="family-id-card-front__photo">' + img + "</div></div>" +
+            '<div class="family-id-card-front__identity">' +
+            '<h2 class="family-id-card-front__name">' + esc(name) + "</h2>" +
+            '<p class="family-id-card-front__role">' + esc(role) + "</p></div></div>" +
+            '<div class="family-id-card-front__divider"></div>' +
+            '<div class="family-id-card-front__footer">' +
+            '<div class="family-id-card-front__col-left">' +
+            detailRow("Issue Date", formatFamilyCardDate(family.IssueDate)) +
+            detailRow("Expiry Date", formatFamilyCardDate(family.ExpiryDate)) +
+            "</div>" +
+            '<div class="family-id-card-front__vrule"></div>' +
+            '<div class="family-id-card-front__col-right">' +
+            detailRow("Card ID", valOrDash(family.CardId)) +
+            detailRow("Employee ID", valOrDash(family.EmpId)) +
+            detailRow("CNIC", valOrDash(family.Cnic)) +
+            "</div></div></div></div>" +
+            '<div class="card-print-page card-print-page--family-back">' +
+            '<div class="family-id-card-aspect family-id-card-back family-id-card-back-side">' +
+            '<div class="family-id-card-back__bar"><span>NON RESIDENT</span></div>' +
+            '<div class="family-id-card-back__wm" aria-hidden="true"></div>' +
+            '<div class="family-id-card-back__body">' +
+            '<div class="family-id-card-back__left">' +
+            '<img class="logo-b" src="' + esc(logoB) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackLogo) + "';\" />" +
+            "<p>24/7 Call</p><p>(021) 38771555 Ext-685</p><p>www.btkarachi.com</p>" +
+            '<img class="family-id-card-back__sign" src="' + esc(sign) + '" alt="" onerror="this.style.display=\'none\'" />' +
+            "<p>Issuing Authority</p><p>Director Security Bahria Town</p></div>" +
+            '<div class="family-id-card-back__vrule"></div>' +
+            '<div class="family-id-card-back__right">' +
+            '<img class="family-id-card-back__qr" src="' + esc(familyQrUrl(family)) + '" alt="QR code" />' +
+            "<ul><li>This card is for employee family members only.</li><li>Pass only carried by authorized person.</li>" +
+            "<li>Photocopy of this pass is not allowed.</li><li>Pass is non-transferable.</li></ul>" +
+            "<div><p>If Found.</p><p>Please return to</p><p>Bahria Town (Pvt) Ltd.</p></div></div></div></div></div></div>"
+        );
+    }
+
     function renderIdCardBlock(record) {
         var name = (record.EmployeeName || record.EmpId || "—");
         if (name !== "—") name = String(name).toUpperCase();
@@ -753,23 +845,72 @@
         );
     }
 
-    function renderPrintCardLayout(record) {
+    function renderPrintCardLayout(record, familyCards) {
+        familyCards = familyCards || [];
+        var hasFamily = familyCards.length > 0;
         var name = primaryName(record);
         var subtitle = name
             ? ("Employee " + (record.EmpId || "—") + " · " + name)
             : ("Record #" + (record.Id || "—"));
 
+        var iconEmployee =
+            '<svg class="print-card-tabs__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">' +
+            '<rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/>' +
+            '<path d="M3 10h18" stroke="currentColor" stroke-width="1.6"/>' +
+            '<circle cx="9" cy="14" r="2" stroke="currentColor" stroke-width="1.4"/></svg>';
+        var iconFamily =
+            '<svg class="print-card-tabs__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">' +
+            '<circle cx="9" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/>' +
+            '<circle cx="16" cy="9" r="2" stroke="currentColor" stroke-width="1.5"/>' +
+            '<path d="M4 19c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+            '<path d="M14 19c0-1.8 1.4-3 3.5-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+        var tabsHtml = hasFamily
+            ? ('<nav class="print-card-tabs" role="tablist" aria-label="Preview card type">' +
+              '<button type="button" class="print-card-tabs__btn print-card-tab is-active" data-print-tab="employee" role="tab" aria-selected="true">' +
+              iconEmployee + "<span>Employee card</span></button>" +
+              '<button type="button" class="print-card-tabs__btn print-card-tabs__btn--family print-card-tab" data-print-tab="family" role="tab" aria-selected="false">' +
+              iconFamily + "<span>Family card</span></button></nav>")
+            : "";
+
+        var familyPickerHtml = "";
+        if (hasFamily && familyCards.length > 1) {
+            familyPickerHtml = '<div class="print-family-picker"><label for="printFamilyMemberPicker">Family member</label><select id="printFamilyMemberPicker">';
+            for (var fi = 0; fi < familyCards.length; fi++) {
+                var fc = familyCards[fi];
+                familyPickerHtml +=
+                    '<option value="' + fi + '">' + esc(valOrDash(fc.CardName)) + " · " + esc(formatRelationshipLabel(fc.Relationship)) + "</option>";
+            }
+            familyPickerHtml += "</select></div>";
+        }
+
+        var familyPreviewHtml = hasFamily
+            ? ('<div class="family-preview-side-toggle no-print-in-modal">' +
+              '<button type="button" class="family-side-btn is-active" data-family-side="front">Show front</button>' +
+              '<button type="button" class="family-side-btn" data-family-side="back">Show back</button></div>' +
+              familyPickerHtml +
+              '<div id="printFamilyPreviewHost">' + renderFamilyIdCardBlock(familyCards[0]) + "</div>")
+            : '<p class="print-assign-hint">No family cards linked to this employee.</p>';
+
         return (
             '<article class="print-card-layout">' +
             '<header class="print-card-layout__head">' +
-            "<h3>Employee ID card preview</h3>" +
-            "<p>" + esc(subtitle) + "</p>" +
+            '<div class="print-card-layout__head-main">' +
+            "<h3>ID card preview</h3>" +
+            "<p>" + esc(subtitle) + "</p></div>" +
+            tabsHtml +
             "</header>" +
             '<div class="print-card-layout__split">' +
-            '<section class="print-card-layout__cards">' +
-            '<p class="print-card-layout__cards-title">Card preview (front &amp; back)</p>' +
+            '<section class="print-card-layout__cards print-card-tab-panel" id="printCardTabEmployee" data-print-panel="employee">' +
+            '<p class="print-card-layout__cards-title">Employee card (front &amp; back)</p>' +
             '<div id="printCardPreviewHost">' + renderIdCardBlock(record) + "</div>" +
             "</section>" +
+            (hasFamily
+                ? ('<section class="print-card-layout__cards print-card-layout__cards--family print-card-tab-panel is-hidden" id="printCardTabFamily" data-print-panel="family">' +
+                  '<p class="print-card-layout__cards-title">Family pass (front &amp; back)</p>' +
+                  familyPreviewHtml +
+                  "</section>")
+                : "") +
             '<section class="print-card-layout__form">' +
             '<p class="print-card-layout__form-title">Print &amp; assignment</p>' +
             printAssignmentFieldsHtml(record) +
@@ -799,6 +940,60 @@
             roField("Requester remarks", record.RequesterRemarks, { half: true }) +
             "</div></section></div></article>"
         );
+    }
+
+    function setFamilyPreviewSide(side) {
+        var area = document.getElementById("printCardPreviewAreaFamily");
+        if (!area) return;
+        var frontPage = area.querySelector(".card-print-page--family-front");
+        var backPage = area.querySelector(".card-print-page--family-back");
+        var showFront = side !== "back";
+        if (frontPage) frontPage.classList.toggle("is-hidden", !showFront);
+        if (backPage) backPage.classList.toggle("is-hidden", showFront);
+        document.querySelectorAll(".family-side-btn").forEach(function (btn) {
+            var active = btn.getAttribute("data-family-side") === (showFront ? "front" : "back");
+            btn.classList.toggle("is-active", active);
+        });
+    }
+
+    function bindPrintCardUi(record, familyCards) {
+        familyCards = familyCards || [];
+        document.querySelectorAll(".print-card-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var tab = btn.getAttribute("data-print-tab");
+                document.querySelectorAll(".print-card-tab").forEach(function (b) {
+                    var on = b === btn;
+                    b.classList.toggle("is-active", on);
+                    b.setAttribute("aria-selected", on ? "true" : "false");
+                });
+                var empPanel = document.getElementById("printCardTabEmployee");
+                var famPanel = document.getElementById("printCardTabFamily");
+                if (empPanel) empPanel.classList.toggle("is-hidden", tab !== "employee");
+                if (famPanel) famPanel.classList.toggle("is-hidden", tab !== "family");
+                syncPrintCardButton();
+            });
+        });
+
+        var picker = document.getElementById("printFamilyMemberPicker");
+        if (picker && familyCards.length) {
+            picker.addEventListener("change", function () {
+                var idx = parseInt(picker.value, 10);
+                if (isNaN(idx) || !familyCards[idx]) return;
+                var host = document.getElementById("printFamilyPreviewHost");
+                if (host) host.innerHTML = renderFamilyIdCardBlock(familyCards[idx]);
+                setFamilyPreviewSide("front");
+            });
+        }
+
+        document.querySelectorAll(".family-side-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                setFamilyPreviewSide(btn.getAttribute("data-family-side"));
+            });
+        });
+
+        if (familyCards.length) {
+            setFamilyPreviewSide("front");
+        }
     }
 
     function openPrintModal() {
@@ -857,9 +1052,22 @@
         return true;
     }
 
+    function activePrintTab() {
+        var active = document.querySelector(".print-card-tab.is-active");
+        return active ? active.getAttribute("data-print-tab") : "employee";
+    }
+
     function syncPrintCardButton() {
         var btn = document.getElementById("btnPrintCardPreview");
         if (!btn) return;
+        if (activePrintTab() === "family") {
+            var famOk = !!document.getElementById("printCardPreviewAreaFamily");
+            btn.disabled = !famOk;
+            btn.classList.toggle("is-disabled", !famOk);
+            btn.setAttribute("aria-disabled", famOk ? "false" : "true");
+            btn.removeAttribute("title");
+            return;
+        }
         var ok = printAssignmentIsComplete();
         btn.disabled = !ok;
         btn.classList.toggle("is-disabled", !ok);
@@ -903,7 +1111,8 @@
                 var r = payload.Record;
                 var bodyEl = document.getElementById("printCardBody");
                 if (bodyEl) {
-                    bodyEl.innerHTML = renderPrintCardLayout(r);
+                    bodyEl.innerHTML = renderPrintCardLayout(r, payload.FamilyCards || []);
+                    bindPrintCardUi(r, payload.FamilyCards || []);
                 }
                 syncPrintCardButton();
                 loadRecords();
@@ -937,7 +1146,9 @@
                     body.innerHTML = "<p class=\"detail-loading\">" + esc((payload && payload.Error) || "Unable to load record.") + "</p>";
                     return;
                 }
-                body.innerHTML = renderPrintCardLayout(payload.Record);
+                var family = payload.FamilyCards || [];
+                body.innerHTML = renderPrintCardLayout(payload.Record, family);
+                bindPrintCardUi(payload.Record, family);
                 syncPrintCardButton();
             })
             .catch(function (err) {
@@ -1139,6 +1350,10 @@
     }
 
     function printCardPreviewOnly() {
+        if (activePrintTab() === "family") {
+            printFamilyCardPreviewOnly();
+            return;
+        }
         if (!printAssignmentIsComplete()) {
             recordsSweetAlert(
                 "warning",
@@ -1173,6 +1388,41 @@
 
         function cleanup() {
             document.body.classList.remove("print-card-preview");
+            if (root.parentNode) root.parentNode.removeChild(root);
+            window.removeEventListener("afterprint", cleanup);
+        }
+
+        window.addEventListener("afterprint", cleanup);
+        window.print();
+        setTimeout(cleanup, 3000);
+    }
+
+    function printFamilyCardPreviewOnly() {
+        var area = document.getElementById("printCardPreviewAreaFamily");
+        if (!area) return;
+        var front = area.querySelector(".family-id-card-front-side");
+        var back = area.querySelector(".family-id-card-back-side");
+        if (!front || !back) return;
+
+        var root = document.createElement("div");
+        root.className = "card-print-root";
+        root.setAttribute("aria-hidden", "true");
+
+        var pageFront = document.createElement("div");
+        pageFront.className = "card-print-page card-print-page--family-front";
+        pageFront.appendChild(front.cloneNode(true));
+
+        var pageBack = document.createElement("div");
+        pageBack.className = "card-print-page card-print-page--family-back";
+        pageBack.appendChild(back.cloneNode(true));
+
+        root.appendChild(pageFront);
+        root.appendChild(pageBack);
+        document.body.appendChild(root);
+        document.body.classList.add("print-family-card-preview");
+
+        function cleanup() {
+            document.body.classList.remove("print-family-card-preview");
             if (root.parentNode) root.parentNode.removeChild(root);
             window.removeEventListener("afterprint", cleanup);
         }
@@ -1223,6 +1473,7 @@
         if (!window.RfidForm || newRequestFormReady) return;
         RfidForm.configure({
             ajaxSaveUrl: recordsFormSaveUrl(),
+            recordsLookupUrl: recordsApiUrl(""),
             onSaveSuccess: function () {
                 closeNewRequestModal();
                 loadRecords();
@@ -1248,7 +1499,23 @@
     function openNewRequestModal() {
         if (!can("form")) return;
         ensureNewRequestForm();
-        if (window.RfidForm && RfidForm.resetFormValues) RfidForm.resetFormValues();
+        if (window.RfidForm && RfidForm.openWithMode) RfidForm.openWithMode("default");
+        else if (window.RfidForm && RfidForm.resetFormValues) RfidForm.resetFormValues();
+        document.getElementById("newRequestModal").classList.remove("is-hidden");
+        document.body.style.overflow = "hidden";
+    }
+
+    function openAddFamilyModal(empId) {
+        if (!can("form")) return;
+        ensureNewRequestForm();
+        if (window.RfidForm && RfidForm.openWithMode) RfidForm.openWithMode("familyOnly");
+        if (empId) {
+            var empEl = document.getElementById("txtEmpId");
+            if (empEl) {
+                empEl.value = String(empId).trim();
+                empEl.dispatchEvent(new Event("blur"));
+            }
+        }
         document.getElementById("newRequestModal").classList.remove("is-hidden");
         document.body.style.overflow = "hidden";
     }
@@ -1270,6 +1537,13 @@
             lnkNew.addEventListener("click", function (e) {
                 e.preventDefault();
                 openNewRequestModal();
+            });
+        }
+        var lnkFam = document.getElementById("lnkAddFamily");
+        if (lnkFam) {
+            lnkFam.addEventListener("click", function (e) {
+                e.preventDefault();
+                openAddFamilyModal("");
             });
         }
         var nrClose = document.getElementById("newRequestClose");

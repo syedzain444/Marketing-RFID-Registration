@@ -16,7 +16,7 @@
     <link href="Site.css" rel="stylesheet" />
     <link href="Content/marketing-sidebar.css?v=4" rel="stylesheet" />
     <link href="Content/marketing-wide.css?v=1" rel="stylesheet" />
-    <link href="Content/rfid-records.css" rel="stylesheet" />
+    <link href="Content/rfid-records.css?v=3" rel="stylesheet" />
     <link href="Content/marketing-dashboard.css?v=2" rel="stylesheet" />
 </head>
 <body class="records-page marketing-app dashboard-v2">
@@ -41,6 +41,7 @@
             <div class="actions dashboard-actions">
                 <span class="dashboard-user" id="recordsUserLabel" runat="server"></span>
                 <a runat="server" id="lnkNewRequest" href="#" class="btn-dash btn-dash--outline" Visible="false">+ New request</a>
+                <a runat="server" id="lnkAddFamily" href="#" class="btn-dash btn-dash--outline" Visible="false">+ Add family card</a>
                 <a runat="server" id="lnkAdmin" href="RolePermissions.aspx" class="btn-dash btn-dash--ghost" Visible="false">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     Admin
@@ -129,7 +130,7 @@
         <div id="printCardModal" class="detail-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="printCardModalTitle">
             <div class="detail-modal__backdrop" id="printCardBackdrop"></div>
             <div class="detail-modal__sheet detail-modal__sheet--print">
-                <button type="button" class="detail-modal__close" id="printCardClose" aria-label="Close">&times;</button>
+                <button type="button" class="detail-modal__close detail-modal__close--hero" id="printCardClose" aria-label="Close">&times;</button>
                 <div class="detail-modal__body" id="printCardBody">
                     <p class="detail-loading">Loading…</p>
                 </div>
@@ -309,8 +310,8 @@
         <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
         <script src="Scripts/rfid-photos.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="Scripts/rfid-form.js?v=8"></script>
-        <script src="Scripts/rfid-records.js?v=12"></script>
+        <script src="Scripts/rfid-form.js?v=10"></script>
+        <script src="Scripts/rfid-records.js?v=16"></script>
     </form>
 </body>
 </html>

@@ -169,11 +169,13 @@ namespace RFID_Marketing_Form.Data
 
                             var record = ReadRecordDetail(reader, table);
                             EnrichEmployeeProfile(conn, record);
+                            var familyCards = ListFamilyCardsByEmpId(conn, record.EmpId);
                             return new RfidRecordsResult
                             {
                                 Ok = true,
                                 TableName = table.Qualified,
-                                Record = record
+                                Record = record,
+                                FamilyCards = familyCards
                             };
                         }
                     }
@@ -665,6 +667,57 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
+        public string TryGetEmployeeDisplayName(string empId)
+        {
+            if (string.IsNullOrWhiteSpace(empId))
+            {
+                return null;
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing) || IsBlocked(cs))
+            {
+                return null;
+            }
+
+            try
+            {
+                var table = ResolveTable(cs);
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    var nameCol = !string.IsNullOrEmpty(table.NameColumn)
+                        ? table.NameColumn
+                        : (table.HasCardName ? "CARD_NAME" : null);
+                    if (string.IsNullOrEmpty(nameCol))
+                    {
+                        return EmployeeRecordExists(empId) ? empId.Trim() : null;
+                    }
+
+                    var sql = "SELECT " + nameCol + " FROM " + table.Qualified +
+                              " WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) AND ROWNUM = 1";
+                    using (var cmd = Command(conn, null, sql))
+                    {
+                        AddVarchar(cmd, "emp", empId.Trim(), 20);
+                        var scalar = cmd.ExecuteScalar();
+                        if (scalar == null || scalar == DBNull.Value)
+                        {
+                            return null;
+                        }
+
+                        var name = Convert.ToString(scalar, CultureInfo.InvariantCulture).Trim();
+                        return name.Length > 0 ? name : empId.Trim();
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public SaveResult SaveFamilyCard(FamilyCardInput input)
         {
             var issues = FamilyCardValidator.Validate(input);
@@ -740,20 +793,35 @@ namespace RFID_Marketing_Form.Data
                             newId = ReadDecimal(idCmd.ExecuteScalar());
                         }
 
+                        decimal? parentAssignId = null;
+                        var empTable = ResolveTable(cs);
+                        using (var parentCmd = Command(conn, tx,
+                            "SELECT ID FROM " + empTable.Qualified + " WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) AND ROWNUM = 1"))
+                        {
+                            AddVarchar(parentCmd, "emp", input.EmpId, 20);
+                            var parentScalar = parentCmd.ExecuteScalar();
+                            if (parentScalar != null && parentScalar != DBNull.Value)
+                            {
+                                parentAssignId = ReadDecimal(parentScalar);
+                            }
+                        }
+
                         const string insertSql =
-                            "INSERT INTO {0} (ID, EMP_ID, DEPENDENT_ID, CARD_ID, CARD_NAME, RELATIONSHIP, CNIC, RFID_NUMBER, " +
+                            "INSERT INTO {0} (ID, PARENT_ASSIGN_ID, EMP_ID, DEPENDENT_ID, CARD_ID, CARD_NUMBER, CARD_NAME, RELATIONSHIP, CNIC, RFID_NUMBER, " +
                             "ISSUE_DATE, EXPIRY_DATE, ISSUED_BY, PRINT_DATE, CREATED_DATE, STATUS, IS_APPROVED, APPROVED_DATE, APPROVE_ID, " +
-                            "HOD_REMARKS, IS_FORWARD_HOD, FORWARD_HOD_BY, FORWARD_HOD_ON, REQUESTER_REMARKS, IMAGE_PATH) VALUES (" +
-                            ":id, :emp_id, :dependent_id, :card_id, :card_name, :relationship, :cnic, :rfid_number, " +
+                            "HOD_REMARKS, IS_FORWARD_HOD, FORWARD_HOD_BY, FORWARD_HOD_ON, REQUESTER_REMARKS, REMARKS, IMAGE_PATH) VALUES (" +
+                            ":id, :parent_assign_id, :emp_id, :dependent_id, :card_id, :card_number, :card_name, :relationship, :cnic, :rfid_number, " +
                             ":issue_date, :expiry_date, :issued_by, :print_date, :created_date, :status, :is_approved, :approved_date, :approve_id, " +
-                            ":hod_remarks, :is_forward_hod, :forward_hod_by, :forward_hod_on, :requester_remarks, :image_path)";
+                            ":hod_remarks, :is_forward_hod, :forward_hod_by, :forward_hod_on, :requester_remarks, :remarks, :image_path)";
 
                         using (var cmd = Command(conn, tx, string.Format(CultureInfo.InvariantCulture, insertSql, familyTable)))
                         {
                             AddNumber(cmd, "id", newId);
+                            AddNumber(cmd, "parent_assign_id", parentAssignId);
                             AddVarchar(cmd, "emp_id", input.EmpId, 20);
                             AddNumber(cmd, "dependent_id", dependentId);
                             AddVarchar(cmd, "card_id", input.CardId, 30);
+                            AddVarchar(cmd, "card_number", input.CardId, 30);
                             AddVarchar(cmd, "card_name", input.CardName, 100);
                             AddVarchar(cmd, "relationship", input.Relationship, 50);
                             AddVarchar(cmd, "cnic", NullIfEmpty(input.Cnic), 20);
@@ -772,6 +840,7 @@ namespace RFID_Marketing_Form.Data
                             AddVarchar(cmd, "forward_hod_by", input.IsForwardHod == "Y" ? NullIfEmpty(input.ForwardBy) : null, 100);
                             AddDate(cmd, "forward_hod_on", input.IsForwardHod == "Y" ? input.ForwardOn : null);
                             AddVarchar(cmd, "requester_remarks", NullIfEmpty(input.RequesterRemarks), 500);
+                            AddVarchar(cmd, "remarks", NullIfEmpty(input.RequesterRemarks), 500);
                             AddVarchar(cmd, "image_path", NullIfEmpty(input.PhotoPath), 500);
                             cmd.ExecuteNonQuery();
                         }
@@ -799,6 +868,56 @@ namespace RFID_Marketing_Form.Data
                 NoteAuthFailure(cs, ex, message);
                 return ErrorResult(message);
             }
+        }
+
+        private static List<FamilyCardRecord> ListFamilyCardsByEmpId(OracleConnection conn, string empId)
+        {
+            var list = new List<FamilyCardRecord>();
+            if (conn == null || string.IsNullOrWhiteSpace(empId))
+            {
+                return list;
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            const string sqlTemplate =
+                "SELECT ID, EMP_ID, DEPENDENT_ID, CARD_ID, CARD_NAME, RELATIONSHIP, CNIC, RFID_NUMBER, " +
+                "ISSUE_DATE, EXPIRY_DATE, IMAGE_PATH, STATUS FROM {0} " +
+                "WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) ORDER BY DEPENDENT_ID";
+
+            try
+            {
+                using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sqlTemplate, familyTable)))
+                {
+                    AddVarchar(cmd, "emp", empId.Trim(), 20);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new FamilyCardRecord
+                            {
+                                Id = ReadDecimal(reader["ID"]),
+                                EmpId = ReadString(reader, "EMP_ID"),
+                                DependentId = ReadDecimal(reader["DEPENDENT_ID"]),
+                                CardId = ReadString(reader, "CARD_ID"),
+                                CardName = ReadString(reader, "CARD_NAME"),
+                                Relationship = ReadString(reader, "RELATIONSHIP"),
+                                Cnic = ReadString(reader, "CNIC"),
+                                RfidNumber = ReadString(reader, "RFID_NUMBER"),
+                                IssueDate = ReadDateDisplay(reader, "ISSUE_DATE"),
+                                ExpiryDate = ReadDateDisplay(reader, "EXPIRY_DATE"),
+                                PhotoPath = ReadString(reader, "IMAGE_PATH"),
+                                Status = ReadString(reader, "STATUS")
+                            });
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return new List<FamilyCardRecord>();
+            }
+
+            return list;
         }
 
         private static string ResolveFamilyTableQualified()
