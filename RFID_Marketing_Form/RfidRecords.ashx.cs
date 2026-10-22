@@ -116,7 +116,8 @@ namespace RFID_Marketing_Form
                         id,
                         context.Request["issuedBy"],
                         context.Request["printDate"],
-                        context.Request["rfidNumber"]);
+                        context.Request["rfidNumber"],
+                        context.Request["etag"]);
                 }
             }
             else if (action == "updatefamilyprintassignment")
@@ -133,7 +134,8 @@ namespace RFID_Marketing_Form
                         id,
                         context.Request["issuedBy"],
                         context.Request["printDate"],
-                        context.Request["rfidNumber"]);
+                        context.Request["rfidNumber"],
+                        context.Request["etag"]);
                 }
             }
             else if (action == "lookupemp")

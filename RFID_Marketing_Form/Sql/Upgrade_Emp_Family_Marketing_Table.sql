@@ -87,6 +87,7 @@ BEGIN
   add_col('RELATIONSHIP',       'RELATIONSHIP VARCHAR2(50)');
   add_col('CNIC',               'CNIC VARCHAR2(20)');
   add_col('RFID_NUMBER',        'RFID_NUMBER VARCHAR2(50)');
+  add_col('ETAG',               'ETAG VARCHAR2(50)');
   add_col('ISSUE_DATE',         'ISSUE_DATE DATE');
   add_col('EXPIRY_DATE',        'EXPIRY_DATE DATE');
   add_col('ISSUED_BY',          'ISSUED_BY VARCHAR2(50)');

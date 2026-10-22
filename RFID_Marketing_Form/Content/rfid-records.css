@@ -499,6 +499,29 @@ table.records-table tbody tr:last-child td {
     margin-bottom: 4px;
 }
 
+.edit-field__label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.edit-field--active-toggle .status-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.edit-field--active-toggle .status-switch__label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: var(--text-sm);
+}
+
 .edit-input {
     width: 100%;
     box-sizing: border-box;
@@ -566,13 +589,15 @@ table.records-table tbody tr:last-child td {
 }
 
 .detail-modal__sheet--print .detail-modal__body {
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
     max-height: none;
 }
 
 .detail-modal__foot--split {
-    justify-content: space-between;
+    justify-content: flex-end;
     flex-direction: row-reverse;
+    flex-wrap: wrap;
     gap: 10px;
 }
 
@@ -610,7 +635,7 @@ table.records-table tbody tr:last-child td {
 
 .print-card-layout__split {
     display: grid;
-    grid-template-columns: 500px minmax(0, 1fr);
+    grid-template-columns: minmax(560px, 580px) minmax(280px, 1fr);
     gap: 16px;
     padding: 12px 14px 14px;
     align-items: start;
@@ -807,24 +832,70 @@ table.records-table tbody tr:last-child td {
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
     padding: 10px 8px 8px;
-    overflow: hidden;
+    overflow: visible;
+}
+
+#printCardPreviewHost {
+    width: 100%;
+    overflow: visible;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
 }
 
 .print-card-layout__cards--family {
-    overflow: visible;
-    padding-bottom: 28px;
+    overflow-x: hidden;
+    overflow-y: visible;
+    padding-bottom: 20px;
     min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.print-card-layout__cards--family .print-card-layout__cards-title {
+    align-self: stretch;
+    width: 100%;
+}
+
+.print-card-layout__cards--family .family-preview-side-toggle,
+.print-card-layout__cards--family .print-family-picker {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
 }
 
 .print-card-layout__cards--family #printFamilyPreviewHost {
-    overflow: visible;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.print-card-layout__cards--family .family-card-container.preview-scaled {
+    transform: scale(0.68);
+    transform-origin: top center;
+    margin: 0 auto -36px;
+    width: 540px;
+    min-width: 0;
+    max-width: none;
+}
+
+.print-card-layout__cards--family #printCardPreviewAreaFamily {
+    min-width: 0;
 }
 
 .print-card-layout .card-container.preview-scaled {
-    transform: scale(0.76);
+    transform: scale(0.72);
     transform-origin: top center;
-    margin: 0 auto -28px;
-    gap: 16px;
+    margin: 0 auto -48px;
+    gap: 20px;
+    width: max-content;
+    max-width: none;
+    flex-shrink: 0;
 }
 
 .print-card-layout .ro-form--wide {
@@ -1395,6 +1466,10 @@ table.records-table tbody tr:last-child td {
 }
 
 /* New request modal — full viewport, no scroll, tab slide */
+.new-request-form .is-hidden {
+    display: none !important;
+}
+
 .new-request-modal .detail-modal__sheet--new-request {
     width: min(1280px, 96vw);
     height: auto;
@@ -1546,16 +1621,27 @@ table.records-table tbody tr:last-child td {
 .nr-toolbar {
     display: flex;
     align-items: stretch;
+    flex-wrap: wrap;
     flex-shrink: 0;
     border-bottom: 1px solid var(--line);
     background: #fff;
 }
 
+.new-request-form.is-family-mode .nr-toolbar {
+    flex-direction: column;
+}
+
 .nr-toolbar__toggle {
-    flex: 1;
+    flex: 1 1 280px;
     min-width: 0;
     border-bottom: 0 !important;
     padding: 10px 14px !important;
+}
+
+.new-request-form.is-family-mode .nr-toolbar__toggle {
+    flex: none;
+    width: 100%;
+    border-bottom: 1px solid var(--line);
 }
 
 .nr-tabs {
@@ -1568,8 +1654,39 @@ table.records-table tbody tr:last-child td {
     min-width: 240px;
 }
 
+.new-request-form.is-family-mode .nr-tabs {
+    width: 100%;
+    border-left: 0;
+    border-top: 0;
+    justify-content: stretch;
+}
+
 .nr-tabs.is-hidden {
-    display: none;
+    display: none !important;
+}
+
+.nr-flow-banner {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
+    border-bottom: 1px solid var(--line);
+}
+
+.nr-flow-banner--combo-employee {
+    color: #0f4f4f;
+    background: linear-gradient(90deg, rgba(0, 77, 77, 0.08) 0%, rgba(0, 77, 77, 0.02) 100%);
+}
+
+.nr-flow-banner--combo-family {
+    color: #9a3412;
+    background: linear-gradient(90deg, rgba(217, 119, 6, 0.12) 0%, rgba(217, 119, 6, 0.03) 100%);
+}
+
+.nr-flow-banner--family-only {
+    color: #1e3a5f;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%);
 }
 
 .nr-tabs__btn {
@@ -1657,12 +1774,11 @@ table.records-table tbody tr:last-child td {
 
 .nr-family-panel__intro {
     margin: 0;
-    padding: 6px 12px 0;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
+    padding: 0;
+}
+
+.nr-panel--family .nr-emp-lookup-hint {
+    margin: 8px 12px 0;
 }
 
 .nr-shared-strip {
@@ -1845,10 +1961,15 @@ table.records-table tbody tr:last-child td {
 
 .new-request-family-toggle__hint {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
-    line-height: 1.35;
-    max-width: 520px;
+    line-height: 1.4;
+    max-width: 42rem;
+}
+
+.new-request-family-toggle__hint strong {
+    color: #0d6b52;
+    font-weight: 700;
 }
 
 .new-request-family-toggle.is-hidden {
@@ -1905,6 +2026,18 @@ table.records-table tbody tr:last-child td {
     font-size: 12px;
     font-weight: 600;
     line-height: 1.4;
+}
+
+.field[data-field="emp"] .nr-emp-lookup-hint {
+    margin: 6px 0 0;
+}
+
+.new-request-family-toggle.is-existing-emp-blocked {
+    opacity: 0.72;
+}
+
+.new-request-family-toggle.is-existing-emp-blocked .family-switch {
+    cursor: not-allowed;
 }
 
 .nr-emp-lookup-hint.is-found {

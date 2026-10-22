@@ -13,7 +13,7 @@
     <link href="Content/rfid.css" rel="stylesheet" />
     <link href="Content/marketing-sidebar.css?v=4" rel="stylesheet" />
     <link href="Content/marketing-wide.css?v=1" rel="stylesheet" />
-    <link href="Content/rfid-records.css" rel="stylesheet" />
+    <link href="Content/rfid-records.css?v=10" rel="stylesheet" />
     <link href="Content/admin-users.css?v=2" rel="stylesheet" />
     <link href="Content/marketing-dashboard.css?v=2" rel="stylesheet" />
 </head>
@@ -128,8 +128,9 @@
                                 <label for="userPassword">Password <span class="tag-opt" id="userPasswordHint">Required for new users</span></label>
                                 <input type="password" id="userPassword" class="edit-input" maxlength="100" autocomplete="new-password" />
                             </div>
-                            <div class="edit-field edit-field--full">
-                                <label class="status-switch is-on" id="userActiveSwitch">
+                            <div class="edit-field edit-field--full edit-field--active-toggle">
+                                <span class="edit-field__label" id="userActiveLegend">Active</span>
+                                <label class="status-switch is-on" id="userActiveSwitch" aria-labelledby="userActiveLegend">
                                     <input type="checkbox" id="userActive" class="status-switch__input" checked="checked" />
                                     <span class="status-switch__track" aria-hidden="true"><span class="status-switch__thumb"></span></span>
                                     <span class="status-switch__label">Active</span>

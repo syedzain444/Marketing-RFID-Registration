@@ -68,7 +68,6 @@ D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain.jpeg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\zain-2.jpeg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csprojResolveAssemblyReference.cache
-D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\0ef667fe-b98a-421a-b6dd-3737df78c870_removalai_preview.png
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Bahira-Logo (1).png
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\daniel-leone-v7daTKlZzaw-unsplash.jpg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\BTK LOGO.png
@@ -117,3 +116,14 @@ d:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\RFID_Marketing_Form.dll.c
 d:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csproj.AssemblyReference.cache
 d:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csproj.CoreCompileInputs.cache
 d:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Mar.DCBA284B.Up2Date
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\1.png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Employee\.gitkeep
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\.gitkeep
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Employee\16df9d89cdaf437d852365d2c77d446d_zain-2.jpeg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\3a0bcc2a8a454cba835109a9f883842e_zain-2.jpeg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Employee\b756b7157d584fae8beb43826a6d4893_zain-2.png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Employee\dbfa724f3af046b8a8bddb2739a31263_images.png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\90cb13ec4d144bc38d09daf00069bf9e_ad2cdf34f3f1947cf50a7b1c374a985e.png
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\b5a9e094ece84b948be234255eadbbb9_ad2cdf34f3f1947cf50a7b1c374a985e.jpg
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\4499ec45b680429791ee79e7fb069543_images.jfif
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\e8789bcee0e24dba91028fec39847891_images.jfif

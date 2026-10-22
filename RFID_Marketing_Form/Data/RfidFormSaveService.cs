@@ -105,7 +105,18 @@ namespace RFID_Marketing_Form.Data
                     return familyResult;
                 }
 
-                return repo.SaveFamilyCard(family);
+                return SaveResult.FromIssues(
+                    "validation",
+                    "Some fields need attention",
+                    new List<FieldIssue>
+                    {
+                        new FieldIssue
+                        {
+                            Key = "emp",
+                            Message =
+                                "This Employee ID already has an RFID assignment. Use Add family card on Records to add a dependent—not Family card on New request."
+                        }
+                    });
             }
 
             var input = ReadInputFromRequest(context);

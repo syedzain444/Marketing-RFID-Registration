@@ -42,7 +42,8 @@ namespace RFID_Marketing_Form
                 return;
             }
 
-            var relativePath = PhotoStorage.SavePostedPhoto(context, file);
+            var category = context.Request.Form["category"];
+            var relativePath = PhotoStorage.SavePostedPhoto(context, file, category);
             if (string.IsNullOrEmpty(relativePath))
             {
                 Write(context, false, "Could not save the image.", null, null);

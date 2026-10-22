@@ -86,6 +86,7 @@ namespace RFID_Marketing_Form.Data
         public string Cnic { get; set; }
         public string EmergencyNo { get; set; }
         public string RfidNumber { get; set; }
+        public string Etag { get; set; }
         public string Status { get; set; }
         public string StatusRemarks { get; set; }
         public string IssueDate { get; set; }
@@ -114,6 +115,7 @@ namespace RFID_Marketing_Form.Data
         public string Relationship { get; set; }
         public string Cnic { get; set; }
         public string RfidNumber { get; set; }
+        public string Etag { get; set; }
         public string IssueDate { get; set; }
         public string ExpiryDate { get; set; }
         public string PhotoPath { get; set; }

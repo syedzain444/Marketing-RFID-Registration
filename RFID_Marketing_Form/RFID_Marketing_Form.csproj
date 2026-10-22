@@ -135,6 +135,7 @@
     <Content Include="images\logo.png" />
     <Content Include="Content\rfid.css" />
     <Content Include="Content\rfid-records.css" />
+    <Content Include="Content\emp-id-card.css" />
     <Content Include="Site.css" />
     <Content Include="Content\Site.css" />
     <Content Include="Content\themes\base\images\ui-bg_flat_0_aaaaaa_40x100.png" />
@@ -198,6 +199,7 @@
     <Content Include="Images\signature.png" />
     <Content Include="Images\Signature.png" />
     <Content Include="Images\logo-mono.png" />
+    <Content Include="Images\Bahira-Logo.png" />
     <Content Include="Images\accent.png" />
     <Content Include="Images\bullet.png" />
     <Content Include="Images\heroAccent.png" />
@@ -218,6 +220,7 @@
     <None Include="Scripts\jquery-1.7.1.intellisense.js" />
     <Content Include="Scripts\rfid-form.js" />
     <Content Include="Scripts\rfid-photos.js" />
+    <Content Include="Scripts\qrcode.min.js" />
     <Content Include="Scripts\rfid-records.js" />
     <Content Include="Scripts\jquery-1.7.1.js" />
     <Content Include="Scripts\jquery-1.7.1.min.js" />

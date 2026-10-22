@@ -25,9 +25,9 @@
     justify-content: center;
     align-items: flex-start;
     gap: 22px;
-    transform: scale(0.88);
+    transform: scale(0.72);
     transform-origin: top center;
-    margin: 0 auto;
+    margin: 0 auto -48px;
     min-width: min-content;
 }
 
@@ -36,270 +36,12 @@
     .card-preview-stack {
         flex-direction: column;
         align-items: center;
-        transform: scale(0.82);
+        transform: scale(0.65);
     }
 }
 
-/* CR80 ~ 54 × 85.6 mm */
-.id-card {
-    width: 204px;
-    height: 323px;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 9px;
-    line-height: 1.3;
-    position: relative;
-    flex-shrink: 0;
-}
+/* Employee portrait card visuals: Content/emp-id-card.css (EmpCard parity) */
 
-/* —— Front —— */
-.front-card {
-    background: #d4bc7d;
-    border: 1px solid #b8a066;
-    color: #111;
-}
-
-.front-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 10px 10px 4px;
-    background: transparent;
-    min-height: 0;
-    position: relative;
-    z-index: 2;
-}
-
-.header-logo img {
-    width: 72px;
-    max-height: 52px;
-    height: auto;
-    object-fit: contain;
-    display: block;
-}
-
-.header-photo {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #e8e8e8;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    flex-shrink: 0;
-}
-
-.header-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.front-body {
-    position: relative;
-    z-index: 1;
-    padding: 6px 14px 40px;
-    min-height: 180px;
-}
-
-.front-body::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 52%;
-    transform: translate(-50%, -50%);
-    width: 250px;
-    height: 169px;
-    background: url(Images/logo-mono.png) center / contain no-repeat;
-    opacity: 0.18;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.front-body .field-group {
-    position: relative;
-    z-index: 1;
-}
-
-.field-group {
-    margin-bottom: 6px;
-}
-
-.field-label {
-    display: block;
-    font-size: 8px;
-    color: #1a1a1a;
-    font-weight: 400;
-}
-
-.field-value {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    color: #000;
-    word-break: break-word;
-    text-transform: uppercase;
-}
-
-.field-value.emp-id {
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: none;
-}
-
-.grade-badge {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #c4a574;
-    color: #000;
-    text-align: center;
-    font-weight: 800;
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    padding: 8px 4px;
-    z-index: 3;
-}
-
-/* —— Back (matches Bahria Town CR80 artwork) —— */
-.back-card {
-    background: #fff;
-    border: 1px solid #666;
-    display: flex;
-    flex-direction: column;
-    color: #000;
-    font-family: Arial, Helvetica, sans-serif;
-    font-weight: 700;
-}
-
-.back-details {
-    flex-shrink: 0;
-    padding: 11px 11px 45px;
-    border-bottom: 1px solid #000;
-}
-
-.back-row {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-    margin-bottom: 1px;
-    font-size: 8px;
-    line-height: 0.2;
-    font-weight: 700;
-}
-
-.back-row:last-child {
-    margin-bottom: 0;
-}
-
-.back-label {
-    display: table-cell;
-    width: 8vh;
-    color: #000;
-    font-weight: 700;
-    white-space: nowrap;
-    vertical-align: middle;
-    padding: 0 4px 0 0;
-}
-
-.back-value {
-    display: table-cell;
-    width: 15vh;
-    color: #000;
-    font-weight: 700;
-    text-align: left;
-    vertical-align: middle;
-    border-bottom: 1px solid #000;
-    padding: 0 0 1px 4px;
-    text-decoration: none;
-    line-height: 1.2;
-}
-
-.back-notes {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 9px 10px 8px;
-    font-size: 6.5px;
-    font-weight: 700;
-    color: #000;
-    line-height: 1.32;
-    border-bottom: 1px solid #000;
-}
-
-.back-notes p {
-    margin: 0 0 5px;
-}
-
-.back-notes p:last-of-type {
-    margin-bottom: 0;
-}
-
-.authority-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 6px;
-    margin-top: auto;
-    padding-top: 10px;
-}
-
-.authority-text {
-    font-size: 6px;
-    line-height: 1.35;
-    flex: 1 1 auto;
-    max-width: 58%;
-    font-weight: 700;
-}
-
-.authority-text strong {
-    font-weight: 700;
-}
-
-.authority-sign {
-    flex-shrink: 0;
-    text-align: right;
-}
-
-.authority-sign img {
-    width: 56px;
-    height: auto;
-    display: block;
-    margin-left: auto;
-}
-
-.sign-line {
-    border-top: 1px solid #000;
-    width: 60px;
-    margin-top: 1px;
-    margin-left: auto;
-}
-
-.back-footer {
-    flex-shrink: 0;
-    background: #fff;
-    color: #000;
-    text-align: center;
-    padding: 9px 8px 11px;
-    font-size: 6px;
-    line-height: 1.38;
-    font-weight: 700;
-}
-
-.back-footer p {
-    margin: 0;
-    font-weight: 700;
-}
-
-.back-footer p strong {
-    font-weight: 700;
-}
-
-/* Hidden print panel (MyRequests) */
 .pnl-print-wrapper {
     display: none;
 }
@@ -323,155 +65,38 @@
         break-after: auto;
     }
 
-    /* Records: page 1 = front, page 2 = back (CR80 portrait). No fixed stacking. */
-    body.print-card-preview > *:not(.card-print-root) {
-        display: none !important;
-    }
-
-    body.print-card-preview {
+    html.print-card-preview,
+    html.print-card-preview body.print-card-preview {
         margin: 0 !important;
         padding: 0 !important;
         background: #fff !important;
     }
 
+    html.print-card-preview body.print-card-preview > *:not(.card-print-root),
+    body.print-card-preview > *:not(.card-print-root) {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
     body.print-card-preview .card-print-root {
         display: block !important;
         position: static !important;
-        width: 54mm;
-        margin: 0 auto;
-        padding: 0;
-    }
-
-    body.print-card-preview .card-print-page {
-        width: 54mm;
-        height: 85.6mm;
-        min-height: 85.6mm;
-        max-height: 85.6mm;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        overflow: hidden;
-        display: flex;
-        align-items: stretch;
-        justify-content: center;
-        box-sizing: border-box;
-        padding: 0;
-        margin: 0;
-    }
-
-    body.print-card-preview .card-print-page--front {
-        page-break-after: always;
-        break-after: page;
-    }
-
-    body.print-card-preview .card-print-page--back {
-        page-break-before: always;
-        break-before: page;
-        page-break-after: auto;
-        break-after: auto;
-    }
-
-    body.print-card-preview .card-print-root .id-card {
-        width: 54mm !important;
-        height: 85.6mm !important;
-        max-width: 54mm !important;
-        max-height: 85.6mm !important;
-        transform: none !important;
-        box-shadow: none !important;
-        border-radius: 2mm;
-        flex-shrink: 0;
-        margin: 0;
-        overflow: hidden;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    body.print-card-preview .card-print-root .front-card {
-        display: block !important;
-    }
-
-    body.print-card-preview .card-print-root .back-card {
-        display: flex !important;
-        flex-direction: column !important;
-        height: 85.6mm !important;
-        border: 0.25mm solid #666 !important;
-        font-size: 6.5pt;
-        font-weight: 700 !important;
-    }
-
-    body.print-card-preview .card-print-root .back-details {
-        padding: 3mm 3.2mm 2.4mm !important;
-    }
-
-    body.print-card-preview .card-print-root .back-row {
-        font-size: 6.5pt !important;
-        margin-bottom: 1.65mm !important;
-        font-weight: 700 !important;
-    }
-
-    body.print-card-preview .card-print-root .back-label {
-        padding: 0 1mm 0 0 !important;
-        vertical-align: middle !important;
-    }
-
-    body.print-card-preview .card-print-root .back-value {
-        padding: 0 0 0.25mm 1mm !important;
-        border-bottom-width: 0.2mm !important;
-        vertical-align: middle !important;
-    }
-
-    body.print-card-preview .card-print-root .back-notes {
-        flex: 1 1 auto !important;
-        min-height: 0 !important;
-        overflow: hidden !important;
-        padding: 2.4mm 3mm 2mm !important;
-        font-size: 5.25pt !important;
-        line-height: 1.28 !important;
-        font-weight: 700 !important;
-    }
-
-    body.print-card-preview .card-print-root .back-notes p {
-        margin-bottom: 1.4mm !important;
-    }
-
-    body.print-card-preview .card-print-root .authority-container {
-        padding-top: 3mm !important;
-    }
-
-    body.print-card-preview .card-print-root .authority-text {
-        font-size: 5pt !important;
-        max-width: 56% !important;
-        font-weight: 700 !important;
-    }
-
-    body.print-card-preview .card-print-root .authority-sign img {
-        width: 14.5mm !important;
-    }
-
-    body.print-card-preview .card-print-root .sign-line {
-        width: 15.5mm !important;
-        border-top-width: 0.2mm !important;
-    }
-
-    body.print-card-preview .card-print-root .back-footer {
-        flex-shrink: 0 !important;
-        padding: 2.2mm 2.5mm 2.8mm !important;
-        font-size: 5pt !important;
-        line-height: 1.35 !important;
-        font-weight: 700 !important;
-    }
-
-    body.print-card-preview .card-print-root .back-footer p {
-        font-weight: 700 !important;
-    }
-
-    @page {
-        size: 54mm 85.6mm portrait;
-        margin: 0;
+        width: 330px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        visibility: visible !important;
     }
 }
 
 .card-print-root {
     display: none;
+}
+
+@media screen {
+    body.print-card-preview > .card-print-root,
+    body.print-family-card-preview > .card-print-root {
+        display: none !important;
+    }
 }
 
 /* ============================================================
@@ -480,16 +105,17 @@
 
 .family-card-container.preview-scaled {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex-wrap: nowrap;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 0;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 22px;
     transform: scale(0.76);
     transform-origin: top center;
-    margin: 0 auto -24px;
-    min-width: min-content;
-    width: 540px;
+    margin: 0 auto -28px;
+    min-width: 540px;
+    width: max-content;
+    max-width: none;
 }
 
 .family-card-container.preview-scaled .card-print-page.is-hidden {
@@ -507,7 +133,9 @@
 
 .family-id-card-aspect {
     width: 540px;
+    min-width: 540px;
     height: 340px;
+    min-height: 340px;
     position: relative;
     box-sizing: border-box;
     flex-shrink: 0;
@@ -523,8 +151,10 @@
     background: #e7a138;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
     height: 340px;
+    min-height: 340px;
+    max-height: 340px;
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -551,51 +181,87 @@
     flex: 0 0 130px;
     height: 130px;
     min-height: 130px;
+    max-height: 130px;
     background: #1e385c;
-    padding: 12px 20px;
+    padding: 12px 20px 12px 20px;
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     position: relative;
     z-index: 10;
     border-bottom: 2px solid #b89768;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .family-id-card-front__header img.logo-n {
     width: 80px;
     height: 80px;
+    flex: 0 0 80px;
     object-fit: contain;
     margin-top: -14px;
     margin-left: -5px;
 }
 
 .family-id-card-front__titles {
-    text-align: right;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     color: #fff;
-    line-height: 1.15;
+    line-height: 1.25;
+    position: relative;
+    z-index: 12;
+    text-align: right;
 }
 
-.family-id-card-front__titles h2 {
+/* Reference layout: BAHRIA TOWN, KARACHI, EMPLOYEE FAMILY share one right edge */
+.family-id-card-front__titles-stack {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    text-align: right;
+    max-width: 100%;
+}
+
+.family-id-card-front__titles-stack h2,
+.family-id-card-front__titles-stack h3 {
+    display: block;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+    width: max-content;
+    max-width: 100%;
+    text-align: right;
+    box-sizing: border-box;
+}
+
+.family-id-card-front__titles-stack h2 {
     font-size: 24px;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    line-height: 1.15;
+    line-height: 1.25;
 }
 
 .family-id-card-front__titles-city {
-    text-align: center;
+    letter-spacing: 0.05em;
+    /* Shorter line: inset so KARACHI sits centered under BAHRIA TOWN (reference card) */
+    margin-right: 36px;
 }
 
-.family-id-card-front__titles h3 {
+.family-id-card-front__titles-stack h3 {
     margin-top: 2px;
     font-size: 18px;
     font-weight: 400;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #e2e8f0;
-    text-align: center;
+    line-height: 1.25;
 }
 
 .family-id-card-front__middle {
@@ -603,15 +269,17 @@
     flex: 0 0 60px;
     height: 60px;
     min-height: 60px;
+    max-height: 60px;
     z-index: 20;
     flex-shrink: 0;
+    overflow: visible;
 }
 
 .family-id-card-front__photo-wrap {
     position: absolute;
     left: 60px;
-    top: -55px;
-    z-index: 30;
+    top: -52px;
+    z-index: 25;
 }
 
 .family-id-card-front__photo {
@@ -619,7 +287,7 @@
     height: 112px;
     border-radius: 50%;
     overflow: hidden;
-    background: #e5e7eb;
+    background: #ffffff;
     border: 4px solid #1e385c;
     display: flex;
     align-items: center;
@@ -635,11 +303,14 @@
 .family-id-card-front__identity {
     position: absolute;
     left: 170px;
+    right: 20px;
     top: 2px;
-    width: 350px;
-    max-width: calc(100% - 190px);
+    width: auto;
+    max-width: none;
     text-align: center;
     box-sizing: border-box;
+    z-index: 26;
+    pointer-events: none;
 }
 
 .family-id-card-front__name {
@@ -672,14 +343,16 @@
     flex: 0 0 120px;
     height: 120px;
     min-height: 120px;
-    padding: 6px 24px 12px;
+    max-height: 120px;
+    padding: 6px 24px 10px;
     box-sizing: border-box;
     display: flex;
     align-items: stretch;
     color: #2a241e;
     position: relative;
-    z-index: 10;
+    z-index: 30;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .family-id-card-front__col-left {
@@ -725,7 +398,7 @@
 
 .family-id-card-front__label {
     display: block;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
     color: #4a3f35;
@@ -742,16 +415,25 @@
 
 .family-id-card-front__value {
     display: block;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #1a140e;
     line-height: 1.15;
+    word-break: break-word;
+}
+
+.family-card-container.preview-scaled .card-print-page {
+    display: flex;
+    justify-content: center;
+    flex: 0 0 auto;
 }
 
 .family-id-card-back {
     background: #e7a138;
     border: 1px solid rgba(0, 0, 0, 0.1);
     display: none;
+    height: 340px;
+    min-height: 340px;
 }
 
 .family-id-card-back.is-visible {
@@ -826,26 +508,49 @@
 .family-id-card-back__left p,
 .family-id-card-back__right p,
 .family-id-card-back__right li {
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 12px;
     font-weight: 700;
     color: #2a241e;
     margin: 0;
-    line-height: 1.25;
+    line-height: 1.35;
+    letter-spacing: 0;
+    word-spacing: normal;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    font-kerning: normal;
+    font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
 }
 
 .family-id-card-back__right ul {
     list-style: disc;
     padding-left: 16px;
+    padding-right: 10px;
     margin: 0;
     align-self: flex-start;
     text-align: left;
+    width: 100%;
+    max-width: 240px;
+    box-sizing: border-box;
+}
+
+.family-id-card-back__right > div {
+    align-self: flex-start;
+    text-align: left;
+    width: 100%;
+    max-width: 240px;
+    padding-right: 10px;
+    box-sizing: border-box;
 }
 
 .family-id-card-back__qr {
     width: 120px;
     height: 120px;
     object-fit: contain;
-    mix-blend-mode: darken;
+    background: #fff;
+    mix-blend-mode: normal;
 }
 
 .family-id-card-back__sign {
@@ -861,9 +566,15 @@
 
 .family-preview-side-toggle {
     display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    margin-bottom: 10px;
+    margin: 0 0 4px;
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+    z-index: 2;
 }
 
 .family-preview-side-toggle button {
@@ -883,22 +594,32 @@
 }
 
 @media print {
+    html.print-family-card-preview body.print-family-card-preview > *:not(.card-print-root),
     body.print-family-card-preview > *:not(.card-print-root) {
         display: none !important;
+        visibility: hidden !important;
     }
 
     body.print-family-card-preview .card-print-root {
         display: block !important;
         width: 540px;
         margin: 0 auto;
+        visibility: visible !important;
     }
 
     body.print-family-card-preview .card-print-page--family-front,
     body.print-family-card-preview .card-print-page--family-back {
         width: 540px;
         height: 340px;
+        min-height: 340px;
+        max-height: 340px;
         page-break-inside: avoid;
         break-inside: avoid;
+        overflow: hidden;
+        display: block;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
     }
 
     body.print-family-card-preview .card-print-page--family-front {
@@ -909,6 +630,9 @@
     body.print-family-card-preview .family-id-card-aspect {
         width: 540px !important;
         height: 340px !important;
+        max-width: 540px !important;
+        max-height: 340px !important;
+        transform: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         -webkit-print-color-adjust: exact;
@@ -916,8 +640,20 @@
     }
 
     body.print-family-card-preview .family-id-card-back,
-    body.print-family-card-preview .family-id-card-front {
+    body.print-family-card-preview .family-id-card-back-side {
         display: block !important;
+    }
+
+    body.print-family-card-preview .family-id-card-front {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    body.print-family-card-preview .family-id-card-back__qr {
+        mix-blend-mode: normal !important;
+        background: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     @page {

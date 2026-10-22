@@ -31,6 +31,7 @@
     var svgView = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>';
     var svgEdit = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     var svgPrint = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.6"/><rect x="6" y="14" width="12" height="8" stroke="currentColor" stroke-width="1.6"/></svg>';
+    var svgPdf = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0l4-4m-4 4L8 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     var svgMore = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="6" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="18" r="1.5" fill="currentColor"/></svg>';
 
     function avatarColor(name) {
@@ -767,19 +768,103 @@
         return String(rel).trim().replace(/_/g, " ").toUpperCase();
     }
 
-    function familyQrUrl(family) {
-        var text =
+    var FAMILY_QR_PLACEHOLDER =
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+    function familyQrPayload(family) {
+        family = family || {};
+        return (
             "Name: " + (family.CardName || "") +
             "\nCNIC: " + (family.Cnic || "") +
             "\nEmp ID: " + (family.EmpId || "") +
-            "\nRelation: " + formatRelationshipLabel(family.Relationship);
-        return "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(text);
+            "\nRelation: " + formatRelationshipLabel(family.Relationship)
+        );
+    }
+
+    function familyQrPayloadFromImg(img) {
+        if (!img) return "";
+        var enc = img.getAttribute("data-qr-payload");
+        if (!enc) return "";
+        try {
+            return decodeURIComponent(enc);
+        } catch (decodeErr) {
+            return enc;
+        }
+    }
+
+    function generateFamilyQrDataUrl(payload) {
+        payload = payload == null ? "" : String(payload);
+        if (!payload.trim()) return Promise.resolve(FAMILY_QR_PLACEHOLDER);
+        var qrLib = typeof QRCode !== "undefined" ? QRCode : null;
+        if (qrLib && typeof qrLib.toDataURL === "function") {
+            return qrLib
+                .toDataURL(payload, {
+                    width: 120,
+                    margin: 1,
+                    errorCorrectionLevel: "Q",
+                    color: { dark: "#000000", light: "#ffffff" }
+                })
+                .catch(function () {
+                    return (
+                        "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" +
+                        encodeURIComponent(payload)
+                    );
+                });
+        }
+        return Promise.resolve(
+            "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(payload)
+        );
+    }
+
+    function hydrateFamilyCardQrCodes(container, family) {
+        if (!container || !family) return Promise.resolve();
+        var imgs = container.querySelectorAll(".family-id-card-back__qr");
+        if (!imgs.length) return Promise.resolve();
+        var payload = familyQrPayload(family);
+        return generateFamilyQrDataUrl(payload).then(function (dataUrl) {
+            Array.prototype.forEach.call(imgs, function (img) {
+                img.setAttribute("src", dataUrl);
+                img.setAttribute("data-qr-payload", encodeURIComponent(payload));
+            });
+        });
+    }
+
+    function getFamilyPreviewRoot() {
+        return document.getElementById("printCardPreviewAreaFamily");
+    }
+
+    function isFamilyQrPlaceholderSrc(src) {
+        return !src || String(src) === FAMILY_QR_PLACEHOLDER;
+    }
+
+    function bakeFamilyQrOntoPrintRoot(root, family) {
+        if (!root || !family) return Promise.resolve(root);
+        var payload = familyQrPayload(family);
+        return generateFamilyQrDataUrl(payload).then(function (dataUrl) {
+            var qr = root.querySelector(".family-id-card-back__qr");
+            if (qr && dataUrl && dataUrl !== FAMILY_QR_PLACEHOLDER) {
+                qr.setAttribute("src", dataUrl);
+                qr.setAttribute("data-qr-payload", encodeURIComponent(payload));
+            }
+            return root;
+        });
+    }
+
+    function prepareFamilyCr80PrintRoot(area, family) {
+        if (!area) return Promise.resolve(null);
+        return hydrateFamilyCardQrCodes(area, family).then(function () {
+            var root = buildFamilyCr80PrintRoot(area);
+            if (!root) return null;
+            return bakeFamilyQrOntoPrintRoot(root, family);
+        });
     }
 
     function renderFamilyIdCardBlock(family) {
         var root = appRoot();
         var logoN = root + "Images/logoN.png";
+        var logoNAlt = root + "Images/LogoN.png";
         var logoB = root + "Images/LogoB.png";
+        var logoBAlt = root + "Images/logoB.png";
         var sign = root + "Images/signature.png";
         var fallbackLogo = root + "Images/logo.png";
         var photoUrl = resolvePhotoUrl(family.PhotoPath);
@@ -806,9 +891,14 @@
             '<div class="family-id-card-aspect family-id-card-front family-id-card-front-side">' +
             '<div class="family-card-watermark" aria-hidden="true"></div>' +
             '<div class="family-id-card-front__header">' +
-            '<img class="logo-n" src="' + esc(logoN) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackLogo) + "';\" />" +
+            '<img class="logo-n" src="' + esc(logoN) + '" alt="" onerror="if(!this.dataset.alt1){this.dataset.alt1=1;this.src=\'' +
+            esc(logoNAlt) +
+            "';}else{this.onerror=null;this.src='" +
+            esc(fallbackLogo) +
+            "';}\" />" +
             '<div class="family-id-card-front__titles">' +
-            "<h2>BAHRIA TOWN</h2><h2 class=\"family-id-card-front__titles-city\">KARACHI</h2><h3>EMPLOYEE FAMILY</h3></div></div>" +
+            '<div class="family-id-card-front__titles-stack">' +
+            "<h2>BAHRIA TOWN</h2><h2 style = 'margin-right: 36px;' class=\"family-id-card-front__titles-city\">KARACHI</h2><h3>EMPLOYEE FAMILY</h3></div></div></div>" +
             '<div class="family-id-card-front__middle">' +
             '<div class="family-id-card-front__photo-wrap"><div class="family-id-card-front__photo">' + img + "</div></div>" +
             '<div class="family-id-card-front__identity">' +
@@ -832,16 +922,28 @@
             '<div class="family-id-card-back__wm" aria-hidden="true"></div>' +
             '<div class="family-id-card-back__body">' +
             '<div class="family-id-card-back__left">' +
-            '<img class="logo-b" src="' + esc(logoB) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackLogo) + "';\" />" +
-            "<p>24/7 Call</p><p>(021) 38771555 Ext-685</p><p>www.btkarachi.com</p>" +
+            '<img class="logo-b" src="' + esc(logoB) + '" alt="" onerror="if(!this.dataset.alt1){this.dataset.alt1=1;this.src=\'' +
+            esc(logoBAlt) +
+            "';}else{this.onerror=null;this.src='" +
+            esc(fallbackLogo) +
+            "';}\" />" +
+            "<p>24/7 Call</p><p>(021) 3877 1555 Ext-685</p><p>www.btkarachi.com</p>" +
             '<img class="family-id-card-back__sign" src="' + esc(sign) + '" alt="" onerror="this.style.display=\'none\'" />' +
-            "<p>Issuing Authority</p><p>Director Security Bahria Town</p></div>" +
+            "<p>Issuing Authority</p><p>Director Security&nbsp;Bahria&nbsp;Town</p></div>" +
             '<div class="family-id-card-back__vrule"></div>' +
             '<div class="family-id-card-back__right">' +
-            '<img class="family-id-card-back__qr" src="' + esc(familyQrUrl(family)) + '" alt="QR code" />' +
-            "<ul><li>This card is for employee family members only.</li><li>Pass only carried by authorized person.</li>" +
-            "<li>Photocopy of this pass is not allowed.</li><li>Pass is non-transferable.</li></ul>" +
-            "<div><p>If Found.</p><p>Please return to</p><p>Bahria Town (Pvt) Ltd.</p></div></div></div></div></div></div>"
+            '<img class="family-id-card-back__qr" src="' +
+            esc(FAMILY_QR_PLACEHOLDER) +
+            '" data-qr-payload="' +
+            esc(encodeURIComponent(familyQrPayload(family))) +
+            '" alt="QR code" />' +
+            "<ul>" +
+            "<li>This card is for employee&nbsp;family members&nbsp;only.</li>" +
+            "<li>Pass only carried&nbsp;by authorized&nbsp;person.</li>" +
+            "<li>Photocopy of this pass is&nbsp;not allowed.</li>" +
+            "<li>Pass is non-transferable.</li></ul>" +
+            "<div class=\"family-id-card-back__return\">" +
+            "<p>If Found.</p><p>Please&nbsp;return to</p><p>Bahria Town (Pvt)&nbsp;Ltd.</p></div></div></div></div></div></div>"
         );
     }
 
@@ -855,6 +957,9 @@
         var fallback = window.RfidPhotos ? window.RfidPhotos.publicUrl(record.PhotoPath) : "";
         var logo = appRoot() + "Images/logo.png";
         var sign = appRoot() + "Images/signature.png";
+        var gradeBadge = (record.Grade && String(record.Grade).trim())
+            ? String(record.Grade).trim().toUpperCase()
+            : "EMPLOYEE";
         var img =
             photoUrl
                 ? ('<img src="' + esc(photoUrl) + '" alt="" data-fallback="' + esc(fallback) + '" ' +
@@ -875,10 +980,11 @@
             '<div class="field-group"><span class="field-label">Department:</span><span class="field-value">' + esc(dept) + "</span></div>" +
             '<div class="field-group"><span class="field-label">Project/Location:</span><span class="field-value">' + esc(proj) + "</span></div>" +
             "</div>" +
-            '<div class="grade-badge">EMPLOYEE</div></div></div>' +
+            '<div class="grade-badge">' + esc(gradeBadge) + "</div></div></div>" +
             '<div class="card-print-page card-print-page--back">' +
             '<div class="id-card back-card">' +
             '<div class="back-details">' +
+            '<div class="back-row"><span class="back-label">Card ID:</span><span class="back-value">' + esc(valOrDash(record.CardId)) + "</span></div>" +
             '<div class="back-row"><span class="back-label">Joining Date:</span><span class="back-value">' + esc(formatCardBackDate(record.JoiningDate)) + "</span></div>" +
             '<div class="back-row"><span class="back-label">Issue Date:</span><span class="back-value">' + esc(formatCardBackDate(record.IssueDate)) + "</span></div>" +
             '<div class="back-row"><span class="back-label">Expiry Date:</span><span class="back-value">' + esc(formatCardBackDate(record.ExpiryDate)) + "</span></div>" +
@@ -888,10 +994,10 @@
             "</div>" +
             '<div class="back-notes">' +
             "<p>The Employee ID card is replaceable if there is a change in employee's designation or department.</p>" +
-            "<p><strong>Return:</strong> The Employee ID card is property of Bahria Town (Pvt) Ltd. and must be returned to HR Department upon the disengagement of services.</p>" +
+            "<p><strong>Return:</strong><br />The Employee ID card is property of Bahria Town (Pvt) Ltd. and must be returned to HR Department upon the disengagement of services.</p>" +
             '<div class="authority-container">' +
             '<div class="authority-text"><strong>Issuing Authority:</strong><br />HR Department Bahria Town</div>' +
-            '<div class="authority-sign"><img src="' + esc(sign) + '" alt="" onerror="this.style.display=\'none\'" /><div class="sign-line"></div></div>' +
+            '<div class="authority-sign"><img src="' + esc(sign) + '" alt="" onerror="this.style.display=\'none\'" /><div class="sign-line"></div><div class="sign-label">HOD SIGN</div></div>' +
             "</div></div>" +
             '<div class="back-footer">' +
             "<p><strong>If found please return to</strong></p>" +
@@ -902,14 +1008,28 @@
         );
     }
 
+    function defaultIssuedByName() {
+        var name = window.RFID_ISSUED_BY_DEFAULT;
+        if (name == null) return "";
+        return String(name).trim();
+    }
+
+    function resolveIssuedByForPrint(stored) {
+        var value = stored == null ? "" : String(stored).trim();
+        if (value) return value;
+        return defaultIssuedByName();
+    }
+
     function printAssignmentFieldsHtml(opts) {
         opts = opts || {};
         var isFamily = opts.mode === "family";
         var src = opts.source || {};
         var printIso = displayDateToIso(src.PrintDate);
+        var issuedByValue = resolveIssuedByForPrint(src.IssuedBy);
         var createdDisplay = src.CreatedDate && String(src.CreatedDate).trim() ? src.CreatedDate : "—";
         var recordId = src.Id != null ? String(src.Id) : "";
         var rfidId = isFamily ? "printFamilyRfidNumber" : "printCardRfidNumber";
+        var etagId = isFamily ? "printFamilyEtag" : "printCardEtag";
         var printId = isFamily ? "printFamilyPrintDate" : "printCardPrintDate";
         var issuedId = isFamily ? "printFamilyIssuedBy" : "printCardIssuedBy";
         var createdId = isFamily ? "printFamilyCreatedDisplay" : "printCardCreatedDisplay";
@@ -923,13 +1043,20 @@
             '<input type="text" id="' + rfidId + '" class="edit-input rfid-mono" maxlength="50" placeholder="e.g. 123456" value="' + esc(src.RfidNumber || "") + '" />' +
             '<p class="print-assign-hint">Required before printing. Assign the physical card tag here.</p>' +
             "</div>" +
+            '<div class="edit-field edit-field--full">' +
+            '<label for="' + etagId + '">ETAG <span class="req">*</span></label>' +
+            '<input type="text" id="' + etagId + '" class="edit-input rfid-mono" maxlength="50" placeholder="Electronic tag ID" value="' +
+            esc(src.Etag || "") +
+            '" />' +
+            '<p class="print-assign-hint">Required before printing. E-Tag for the printed card (not on the request form).</p>' +
+            "</div>" +
             '<div class="edit-field">' +
             '<label for="' + printId + '">Print date <span class="req">*</span></label>' +
             '<input type="date" id="' + printId + '" class="edit-input" value="' + esc(printIso) + '" />' +
             "</div>" +
             '<div class="edit-field">' +
             '<label for="' + issuedId + '">Issued by <span class="req">*</span></label>' +
-            '<input type="text" id="' + issuedId + '" class="edit-input" maxlength="50" placeholder="Name" value="' + esc(src.IssuedBy || "") + '" />' +
+            '<input type="text" id="' + issuedId + '" class="edit-input" maxlength="50" placeholder="Name" value="' + esc(issuedByValue) + '" />' +
             "</div>" +
             '<div class="edit-field edit-field--full">' +
             "<label>Created date</label>" +
@@ -1037,6 +1164,7 @@
             });
         });
         setFamilyPreviewSide("front");
+        hydrateFamilyCardQrCodes(getFamilyPreviewRoot(), family);
     }
 
     function renderEmployeePrintFormPanel(record) {
@@ -1193,6 +1321,7 @@
                 if (isNaN(idx) || !familyCards[idx]) return;
                 var host = document.getElementById("printFamilyPreviewHost");
                 if (host) host.innerHTML = renderFamilyIdCardBlock(familyCards[idx]);
+                hydrateFamilyCardQrCodes(getFamilyPreviewRoot(), familyCards[idx]);
                 setFamilyPreviewSide("front");
                 refreshFamilyPrintFormPanel();
                 syncPrintCardButton();
@@ -1207,6 +1336,10 @@
 
         if (familyCards.length) {
             setFamilyPreviewSide("front");
+            hydrateFamilyCardQrCodes(
+                getFamilyPreviewRoot(),
+                familyCards[getSelectedFamilyCardIndex()] || familyCards[0]
+            );
         }
         syncPrintFormPanels();
     }
@@ -1254,14 +1387,16 @@
 
     function printAssignmentIsCompleteFor(prefix) {
         var rfidEl = document.getElementById(prefix + "RfidNumber");
+        var etagEl = document.getElementById(prefix + "Etag");
         var printEl = document.getElementById(prefix + "PrintDate");
         var issuedEl = document.getElementById(prefix + "IssuedBy");
         var createdEl = document.getElementById(prefix + "CreatedDisplay");
         var rfid = rfidEl ? String(rfidEl.value || "").trim() : "";
+        var etag = etagEl ? String(etagEl.value || "").trim() : "";
         var printDate = printEl ? String(printEl.value || "").trim() : "";
         var issuedBy = issuedEl ? String(issuedEl.value || "").trim() : "";
         var created = createdEl ? String(createdEl.textContent || "").trim() : "";
-        if (!rfid || !printDate || !issuedBy) {
+        if (!rfid || !etag || !printDate || !issuedBy) {
             return false;
         }
         if (!created || created === "—" || created === "-") {
@@ -1286,30 +1421,33 @@
         return active ? active.getAttribute("data-print-tab") : "employee";
     }
 
-    function syncPrintCardButton() {
-        var btn = document.getElementById("btnPrintCardPreview");
+    function setPrintActionButtonState(btn, enabled, disabledTitle) {
         if (!btn) return;
-        if (activePrintTab() === "family") {
-            var famOk = printFamilyAssignmentIsComplete() && !!document.getElementById("printCardPreviewAreaFamily");
-            btn.disabled = !famOk;
-            btn.classList.toggle("is-disabled", !famOk);
-            btn.setAttribute("aria-disabled", famOk ? "false" : "true");
-            if (!famOk) {
-                btn.setAttribute("title", "Fill RFID number, print date, and issued by for this family card.");
-            } else {
-                btn.removeAttribute("title");
-            }
-            return;
-        }
-        var ok = printAssignmentIsComplete();
-        btn.disabled = !ok;
-        btn.classList.toggle("is-disabled", !ok);
-        btn.setAttribute("aria-disabled", ok ? "false" : "true");
-        if (!ok) {
-            btn.setAttribute("title", "Fill RFID number, print date, issued by, and ensure created date is set.");
+        btn.disabled = !enabled;
+        btn.classList.toggle("is-disabled", !enabled);
+        btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+        if (!enabled && disabledTitle) {
+            btn.setAttribute("title", disabledTitle);
         } else {
             btn.removeAttribute("title");
         }
+    }
+
+    function syncPrintCardButton() {
+        var btnPrint = document.getElementById("btnPrintCardPreview");
+        var btnPdf = document.getElementById("btnDownloadCardPdf");
+        if (!btnPrint && !btnPdf) return;
+        if (activePrintTab() === "family") {
+            var famOk = printFamilyAssignmentIsComplete() && !!document.getElementById("printCardPreviewAreaFamily");
+            var famTitle = "Fill RFID number, ETAG, print date, and issued by for this family card.";
+            setPrintActionButtonState(btnPrint, famOk, famTitle);
+            setPrintActionButtonState(btnPdf, famOk, famTitle);
+            return;
+        }
+        var ok = printAssignmentIsComplete();
+        var empTitle = "Fill RFID number, ETAG, print date, issued by, and ensure created date is set.";
+        setPrintActionButtonState(btnPrint, ok, empTitle);
+        setPrintActionButtonState(btnPdf, ok, empTitle);
     }
 
     function savePrintAssignment() {
@@ -1344,6 +1482,10 @@
         body.append(
             "rfidNumber",
             ((document.getElementById(isFamily ? "printFamilyRfidNumber" : "printCardRfidNumber") || {}).value) || ""
+        );
+        body.append(
+            "etag",
+            ((document.getElementById(isFamily ? "printFamilyEtag" : "printCardEtag") || {}).value) || ""
         );
 
         fetchJson(recordsApiUrl(isFamily ? "action=updatefamilyprintassignment" : "action=updateprintassignment"), {
@@ -1417,6 +1559,7 @@
                         EmpId: payload.Record.EmpId,
                         CardName: payload.Record.EmployeeName,
                         RfidNumber: payload.Record.RfidNumber,
+                        Etag: payload.Record.Etag,
                         IssueDate: payload.Record.IssueDate,
                         ExpiryDate: payload.Record.ExpiryDate,
                         IssuedBy: payload.Record.IssuedBy,
@@ -1698,7 +1841,8 @@
         var pathPromise;
 
         if (file && window.RfidPhotos && window.RfidPhotos.uploadFile) {
-            pathPromise = window.RfidPhotos.uploadFile(file).then(function (data) {
+            var photoCategory = isFamilyRecordsScope() ? "family" : "employee";
+            pathPromise = window.RfidPhotos.uploadFile(file, { category: photoCategory }).then(function (data) {
                 if (!data || !data.ok) {
                     throw new Error((data && data.error) || "Photo upload failed.");
                 }
@@ -1733,29 +1877,480 @@
             });
     }
 
-    function printCardPreviewOnly() {
-        if (activePrintTab() === "family") {
-            printFamilyCardPreviewOnly();
-            return;
-        }
-        if (!printAssignmentIsComplete()) {
-            recordsSweetAlert(
-                "warning",
-                "Complete print & assignment",
-                "Fill RFID number, print date, and issued by before printing."
-            );
-            return;
-        }
-        var area = document.getElementById("printCardPreviewArea");
-        if (!area) return;
+    function cr80FamilyPrintInlineCss() {
+        return (
+            "@page { size: 540px 340px; margin: 0 !important; }" +
+            "*, *::before, *::after { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }" +
+            "html, body { margin: 0 !important; padding: 0 !important; width: 540px !important; height: auto !important; background: #fff !important; overflow: visible !important; }" +
+            ".card-print-root { display: block !important; width: 540px !important; margin: 0 !important; padding: 0 !important; }" +
+            ".card-print-page--family-front, .card-print-page--family-back { display: block !important; width: 540px !important; height: 340px !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; page-break-inside: avoid !important; break-inside: avoid !important; page-break-before: auto !important; break-before: auto !important; }" +
+            ".card-print-page--family-front { page-break-after: always !important; break-after: page !important; }" +
+            ".card-print-page--family-back { page-break-after: auto !important; break-after: auto !important; }" +
+            ".family-id-card-aspect { width: 540px !important; height: 340px !important; min-width: 540px !important; min-height: 340px !important; margin: 0 !important; padding: 0 !important; border-radius: 0 !important; box-shadow: none !important; transform: none !important; overflow: hidden !important; }" +
+            ".family-id-card-front { display: flex !important; flex-direction: column !important; justify-content: space-between !important; height: 340px !important; }" +
+            ".family-id-card-back, .family-id-card-back-side { display: block !important; height: 340px !important; }" +
+            "body.print-family-card-preview > .card-print-root { display: block !important; visibility: visible !important; }" +
+            ".family-id-card-back p,.family-id-card-back li{font-family:Arial,Helvetica,sans-serif!important;" +
+            "letter-spacing:0!important;word-spacing:normal!important;white-space:normal!important;" +
+            "word-break:normal!important;font-kerning:normal!important;font-variant-ligatures:none!important;}" +
+            ".family-id-card-back__qr{mix-blend-mode:normal!important;background:#fff!important;" +
+            "-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}" +
+            cr80PdfCaptureOverrideCss("family")
+        );
+    }
 
+    function waitForDocumentImages(doc, timeoutMs) {
+        timeoutMs = timeoutMs || 10000;
+        if (!doc) return Promise.resolve();
+        var imgs = doc.querySelectorAll("img");
+        var waits = [];
+        for (var i = 0; i < imgs.length; i++) {
+            (function (img) {
+                var src = img.getAttribute("src");
+                if (!src || !String(src).trim()) return;
+                if (img.classList.contains("family-id-card-back__qr")) {
+                    if (isFamilyQrPlaceholderSrc(src)) return;
+                    if (String(src).indexOf("data:image") === 0 && img.complete && img.naturalWidth >= 32) return;
+                }
+                if (img.complete && img.naturalWidth > 0) return;
+                waits.push(
+                    new Promise(function (resolve) {
+                        function done() {
+                            resolve();
+                        }
+                        img.addEventListener("load", done, { once: true });
+                        img.addEventListener("error", done, { once: true });
+                        setTimeout(done, timeoutMs);
+                    })
+                );
+            })(imgs[i]);
+        }
+        if (!waits.length) return Promise.resolve();
+        return Promise.all(waits);
+    }
+
+    function absolutizeDocumentImages(doc, baseHref) {
+        if (!doc || !baseHref) return;
+        var imgs = doc.querySelectorAll("img[src]");
+        for (var i = 0; i < imgs.length; i++) {
+            var img = imgs[i];
+            var src = img.getAttribute("src");
+            if (!src || /^data:|^https?:|^\/\//i.test(src)) continue;
+            try {
+                img.setAttribute("src", new URL(src, baseHref).href);
+            } catch (e) {
+                /* keep original */
+            }
+        }
+    }
+
+    function canvasImageToDataUrl(imgEl) {
+        if (!imgEl || !imgEl.complete || !imgEl.naturalWidth) return null;
+        try {
+            var canvas = document.createElement("canvas");
+            canvas.width = imgEl.naturalWidth;
+            canvas.height = imgEl.naturalHeight;
+            canvas.getContext("2d").drawImage(imgEl, 0, 0);
+            return canvas.toDataURL("image/png");
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function fetchResourceAsDataUrl(url) {
+        if (!url) return Promise.resolve(null);
+        if (String(url).indexOf("data:") === 0) return Promise.resolve(url);
+        return fetch(url, { credentials: "same-origin", mode: "cors", cache: "force-cache" })
+            .then(function (response) {
+                if (!response.ok) throw new Error("fetch failed");
+                return response.blob();
+            })
+            .then(function (blob) {
+                return new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        resolve(reader.result);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            })
+            .catch(function () {
+                return null;
+            });
+    }
+
+    function findPreviewImageForPdf(previewRoot, iframeImg) {
+        if (!previewRoot || !iframeImg) return null;
+        var className = iframeImg.className || "";
+        var parts = className.split(/\s+/).filter(Boolean);
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            var byClass = previewRoot.querySelector("img." + parts[i]);
+            if (byClass) return byClass;
+        }
+        if (iframeImg.closest(".family-id-card-front__photo")) {
+            return previewRoot.querySelector(".family-id-card-front__photo img");
+        }
+        if (iframeImg.closest(".header-photo")) {
+            return previewRoot.querySelector(".header-photo img");
+        }
+        var iframeSrc = iframeImg.getAttribute("src") || "";
+        var previewImgs = previewRoot.querySelectorAll("img");
+        for (i = 0; i < previewImgs.length; i++) {
+            var p = previewImgs[i];
+            if (p.getAttribute("src") === iframeSrc || p.src === iframeImg.src) return p;
+        }
+        return null;
+    }
+
+    function prepareIframeImagesForPdf(idoc, previewRoot) {
+        if (!idoc) return Promise.resolve();
+        var iframeImgs = idoc.querySelectorAll("img[src]");
+        var tasks = [];
+        Array.prototype.forEach.call(iframeImgs, function (iframeImg) {
+            tasks.push(
+                new Promise(function (resolve) {
+                    var previewImg = previewRoot ? findPreviewImageForPdf(previewRoot, iframeImg) : null;
+                    var embedded = previewImg ? canvasImageToDataUrl(previewImg) : null;
+                    if (embedded) {
+                        iframeImg.setAttribute("src", embedded);
+                        resolve();
+                        return;
+                    }
+                    if (iframeImg.classList.contains("family-id-card-back__qr")) {
+                        var qrPayload = familyQrPayloadFromImg(iframeImg);
+                        if (!qrPayload && previewImg) {
+                            qrPayload = familyQrPayloadFromImg(previewImg);
+                        }
+                        var qrSrc = iframeImg.getAttribute("src") || "";
+                        if (
+                            qrPayload &&
+                            (isFamilyQrPlaceholderSrc(qrSrc) || String(qrSrc).indexOf("data:image") !== 0)
+                        ) {
+                            generateFamilyQrDataUrl(qrPayload).then(function (dataUrl) {
+                                if (dataUrl) iframeImg.setAttribute("src", dataUrl);
+                                resolve();
+                            });
+                            return;
+                        }
+                        if (String(qrSrc).indexOf("data:image") === 0 && !isFamilyQrPlaceholderSrc(qrSrc)) {
+                            resolve();
+                            return;
+                        }
+                    }
+                    var src = iframeImg.getAttribute("src") || "";
+                    if (isFamilyQrPlaceholderSrc(src)) {
+                        resolve();
+                        return;
+                    }
+                    try {
+                        src = new URL(src, appRoot()).href;
+                    } catch (urlErr) {
+                        /* keep src */
+                    }
+                    fetchResourceAsDataUrl(src).then(function (dataUrl) {
+                        if (dataUrl) iframeImg.setAttribute("src", dataUrl);
+                        resolve();
+                    });
+                })
+            );
+        });
+        return Promise.all(tasks);
+    }
+
+    function cr80PdfCaptureOverrideCss(printKind) {
+        var w = printKind === "family" ? 540 : 330;
+        var h = printKind === "family" ? 340 : 520;
+        return (
+            "body.print-card-preview > .card-print-root," +
+            "body.print-family-card-preview > .card-print-root{" +
+            "display:block!important;visibility:visible!important;position:relative!important;" +
+            "width:" + w + "px!important;margin:0!important;padding:0!important;}" +
+            "body.print-card-preview .card-print-page," +
+            "body.print-family-card-preview .card-print-page{" +
+            "display:block!important;visibility:visible!important;" +
+            "width:" + w + "px!important;height:" + h + "px!important;" +
+            "min-width:" + w + "px!important;min-height:" + h + "px!important;" +
+            "max-width:" + w + "px!important;max-height:" + h + "px!important;" +
+            "overflow:hidden!important;box-sizing:border-box!important;}" +
+            "body.print-card-preview .card-print-root .id-card," +
+            "body.print-family-card-preview .card-print-root .id-card," +
+            "body.print-family-card-preview .family-id-card-aspect{" +
+            "width:" + w + "px!important;height:" + h + "px!important;" +
+            "box-shadow:none!important;transform:none!important;}"
+        );
+    }
+
+    function cr80EmployeePrintInlineCss() {
+        return (
+            "@page { size: 330px 520px; margin: 0 !important; }" +
+            "*, *::before, *::after { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }" +
+            "html, body { margin: 0 !important; padding: 0 !important; width: 330px !important; height: auto !important; background: #fff !important; overflow: visible !important; }" +
+            ".card-print-root { display: block !important; width: 330px !important; margin: 0 !important; padding: 0 !important; }" +
+            "body.print-card-preview > .card-print-root { display: block !important; visibility: visible !important; }" +
+            ".card-print-page--front, .card-print-page--back { display: block !important; width: 330px !important; height: 520px !important; min-height: 520px !important; max-height: 520px !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; page-break-inside: avoid !important; break-inside: avoid !important; }" +
+            ".card-print-page--front { page-break-after: always !important; break-after: page !important; }" +
+            ".card-print-page--back { page-break-after: auto !important; break-after: auto !important; }" +
+            ".card-print-root .id-card { width: 330px !important; height: 520px !important; min-width: 330px !important; min-height: 520px !important; max-width: 330px !important; max-height: 520px !important; box-shadow: none !important; transform: none !important; margin: 0 !important; }" +
+            cr80PdfCaptureOverrideCss("employee")
+        );
+    }
+
+    function buildCr80PrintDocumentHtml(options) {
+        options = options || {};
+        var bodyClass = options.bodyClass || "print-card-preview";
+        var rootOuterHtml = options.rootHtml || "";
+        var siteCss = appRoot() + "Site.css?v=18";
+        var empCardCss = appRoot() + "Content/emp-id-card.css?v=5";
+        var baseHref = appRoot();
+        var inline =
+            options.printKind === "family" ? cr80FamilyPrintInlineCss() : cr80EmployeePrintInlineCss();
+        return (
+            "<!DOCTYPE html><html lang=\"en\" class=\"" + bodyClass + "\"><head><meta charset=\"utf-8\" />" +
+            "<base href=\"" + baseHref.replace(/"/g, "%22") + "\" />" +
+            "<title>CR80 ID Card</title>" +
+            "<link rel=\"stylesheet\" href=\"" + siteCss + "\" />" +
+            (options.printKind === "family" ? "" : ("<link rel=\"stylesheet\" href=\"" + empCardCss + "\" />")) +
+            "<style>" + inline + "</style></head>" +
+            "<body class=\"" + bodyClass + "\">" +
+            rootOuterHtml +
+            "</body></html>"
+        );
+    }
+
+    function mountCr80PrintDocument(options, onReady) {
+        options = options || {};
+        var root = options.root;
+        if (!root || typeof onReady !== "function") return null;
+
+        var printKind = options.printKind || "employee";
+        var pageW = printKind === "family" ? 540 : 330;
+        var pageH = printKind === "family" ? 340 : 520;
+        var forPdf = !!options.forPdf;
+
+        var iframe = document.createElement("iframe");
+        iframe.setAttribute("title", forPdf ? "CR80 PDF" : "CR80 print");
+        iframe.setAttribute("aria-hidden", "true");
+        if (forPdf) {
+            iframe.style.cssText =
+                "position:fixed;left:0;top:0;width:" + pageW + "px;height:" + (pageH * 2 + 40) +
+                "px;border:0;opacity:0;pointer-events:none;z-index:-1;overflow:hidden;";
+        } else {
+            iframe.style.cssText =
+                "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;pointer-events:none;";
+        }
+        document.body.appendChild(iframe);
+
+        var html = buildCr80PrintDocumentHtml({
+            bodyClass: options.bodyClass || "print-card-preview",
+            printKind: printKind,
+            rootHtml: root.outerHTML
+        });
+
+        var win = iframe.contentWindow;
+        var idoc = win.document;
+        idoc.open();
+        idoc.write(html);
+        idoc.close();
+        if (forPdf) {
+            try {
+                absolutizeDocumentImages(idoc, win.location.href);
+            } catch (absErr) {
+                /* ignore */
+            }
+        }
+
+        function cleanup() {
+            setTimeout(function () {
+                if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+            }, forPdf ? 200 : 3000);
+        }
+
+        var fired = false;
+        function fireReady() {
+            if (fired) return;
+            fired = true;
+            onReady({
+                iframe: iframe,
+                win: win,
+                idoc: idoc,
+                cleanup: cleanup,
+                printKind: printKind,
+                pageW: pageW,
+                pageH: pageH,
+                previewSource: options.previewSource || null
+            });
+        }
+
+        var links = idoc.querySelectorAll('link[rel="stylesheet"]');
+        var afterCssMs = forPdf ? 900 : 120;
+        var fallbackMs = forPdf ? 5500 : 2800;
+        if (!links.length) {
+            setTimeout(fireReady, forPdf ? 1500 : fallbackMs);
+        } else {
+            links.forEach(function (link) {
+                link.addEventListener("load", function () {
+                    setTimeout(fireReady, afterCssMs);
+                });
+                link.addEventListener("error", function () {
+                    setTimeout(fireReady, afterCssMs);
+                });
+            });
+            setTimeout(fireReady, fallbackMs);
+        }
+
+        return iframe;
+    }
+
+    function printCr80InIframe(options) {
+        options = options || {};
+        if (!options.root) return;
+
+        mountCr80PrintDocument(options, function (ctx) {
+            prepareIframeImagesForPdf(ctx.idoc, options.previewSource || null)
+                .then(function () {
+                    return waitForDocumentImages(ctx.idoc, 12000);
+                })
+                .then(function () {
+                    ctx.win.focus();
+                    ctx.win.print();
+                })
+                .catch(function () {
+                    try {
+                        ctx.win.focus();
+                        ctx.win.print();
+                    } catch (printErr) {
+                        /* ignore */
+                    }
+                })
+                .finally(function () {
+                    ctx.cleanup();
+                });
+        });
+    }
+
+    function cr80PdfFilename(printKind) {
+        var isFamily = printKind === "family";
+        var rfidEl = document.getElementById(isFamily ? "printFamilyRfidNumber" : "printCardRfidNumber");
+        var idEl = document.getElementById(isFamily ? "printFamilyRecordId" : "printCardRecordId");
+        var part =
+            (rfidEl && rfidEl.value && String(rfidEl.value).trim()) ||
+            (idEl && idEl.value && String(idEl.value).trim()) ||
+            "card";
+        part = String(part).replace(/[^\w\-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+        if (!part) part = "card";
+        return (isFamily ? "family-id-" : "employee-id-") + part + ".pdf";
+    }
+
+    function downloadCr80PdfFromDocument(ctx) {
+        var jsPDF = window.jspdf && window.jspdf.jsPDF;
+        var html2canvas = window.html2canvas;
+        if (!jsPDF || !html2canvas) {
+            recordsSweetAlert(
+                "error",
+                "PDF unavailable",
+                "PDF libraries did not load. Refresh the page and try again."
+            );
+            ctx.cleanup();
+            return;
+        }
+        var rootEl = ctx.idoc.querySelector(".card-print-root");
+        if (!rootEl) {
+            recordsSweetAlert("error", "PDF failed", "Card content was not found.");
+            ctx.cleanup();
+            return;
+        }
+
+        var btnPdf = document.getElementById("btnDownloadCardPdf");
+        setPrintActionButtonState(btnPdf, false, "Generating PDF…");
+        if (btnPdf) btnPdf.textContent = "Generating…";
+
+        function finishPdfUi() {
+            if (btnPdf) btnPdf.innerHTML = svgPdf + " Download PDF";
+            syncPrintCardButton();
+            ctx.cleanup();
+        }
+
+        prepareIframeImagesForPdf(ctx.idoc, ctx.previewSource)
+            .then(function () {
+                return waitForDocumentImages(ctx.idoc, 12000);
+            })
+            .then(function () {
+                rootEl.style.setProperty("display", "block", "important");
+                rootEl.style.setProperty("visibility", "visible", "important");
+
+                var pages = Array.prototype.slice.call(rootEl.querySelectorAll(".card-print-page"));
+                if (!pages.length) pages = [rootEl];
+
+                var orientation = ctx.pageW > ctx.pageH ? "landscape" : "portrait";
+                var pdf = new jsPDF({
+                    unit: "px",
+                    format: [ctx.pageW, ctx.pageH],
+                    orientation: orientation,
+                    compress: true
+                });
+
+                var chain = Promise.resolve();
+                pages.forEach(function (page, index) {
+                    chain = chain.then(function () {
+                        page.style.setProperty("display", "block", "important");
+                        page.style.setProperty("visibility", "visible", "important");
+                        return html2canvas(page, {
+                            scale: 2,
+                            useCORS: true,
+                            allowTaint: true,
+                            backgroundColor: "#ffffff",
+                            logging: false,
+                            width: ctx.pageW,
+                            height: ctx.pageH,
+                            windowWidth: ctx.pageW,
+                            windowHeight: ctx.pageH,
+                            scrollX: 0,
+                            scrollY: 0,
+                            window: ctx.win
+                        }).then(function (canvas) {
+                            if (!canvas || !canvas.width) {
+                                throw new Error("Empty card capture.");
+                            }
+                            var imgData = canvas.toDataURL("image/jpeg", 0.98);
+                            if (index > 0) {
+                                pdf.addPage([ctx.pageW, ctx.pageH], orientation);
+                            }
+                            pdf.addImage(imgData, "JPEG", 0, 0, ctx.pageW, ctx.pageH, undefined, "FAST");
+                        });
+                    });
+                });
+
+                return chain.then(function () {
+                    pdf.save(cr80PdfFilename(ctx.printKind));
+                    finishPdfUi();
+                });
+            })
+            .catch(function (err) {
+                finishPdfUi();
+                recordsSweetAlert(
+                    "error",
+                    "PDF failed",
+                    (err && err.message) || "Could not generate PDF. Try Print → Save as PDF."
+                );
+            });
+    }
+
+    function downloadCr80InIframe(options) {
+        options = options || {};
+        if (!options.root) return;
+        options.forPdf = true;
+        mountCr80PrintDocument(options, downloadCr80PdfFromDocument);
+    }
+
+    function buildEmployeeCr80PrintRoot(area) {
         var front = area.querySelector(".front-card");
         var back = area.querySelector(".back-card");
-        if (!front || !back) return;
+        if (!front || !back) return null;
 
         var root = document.createElement("div");
         root.className = "card-print-root";
-        root.setAttribute("aria-hidden", "true");
 
         var pageFront = document.createElement("div");
         pageFront.className = "card-print-page card-print-page--front";
@@ -1767,38 +2362,16 @@
 
         root.appendChild(pageFront);
         root.appendChild(pageBack);
-        document.body.appendChild(root);
-        document.body.classList.add("print-card-preview");
-
-        function cleanup() {
-            document.body.classList.remove("print-card-preview");
-            if (root.parentNode) root.parentNode.removeChild(root);
-            window.removeEventListener("afterprint", cleanup);
-        }
-
-        window.addEventListener("afterprint", cleanup);
-        window.print();
-        setTimeout(cleanup, 3000);
+        return root;
     }
 
-    function printFamilyCardPreviewOnly() {
-        if (!printFamilyAssignmentIsComplete()) {
-            recordsSweetAlert(
-                "warning",
-                "Complete print & assignment",
-                "Fill RFID number, print date, and issued by for this family card before printing."
-            );
-            return;
-        }
-        var area = document.getElementById("printCardPreviewAreaFamily");
-        if (!area) return;
+    function buildFamilyCr80PrintRoot(area) {
         var front = area.querySelector(".family-id-card-front-side");
         var back = area.querySelector(".family-id-card-back-side");
-        if (!front || !back) return;
+        if (!front || !back) return null;
 
         var root = document.createElement("div");
         root.className = "card-print-root";
-        root.setAttribute("aria-hidden", "true");
 
         var pageFront = document.createElement("div");
         pageFront.className = "card-print-page card-print-page--family-front";
@@ -1810,18 +2383,114 @@
 
         root.appendChild(pageFront);
         root.appendChild(pageBack);
-        document.body.appendChild(root);
-        document.body.classList.add("print-family-card-preview");
+        return root;
+    }
 
-        function cleanup() {
-            document.body.classList.remove("print-family-card-preview");
-            if (root.parentNode) root.parentNode.removeChild(root);
-            window.removeEventListener("afterprint", cleanup);
+    function printCardPreviewOnly() {
+        if (activePrintTab() === "family") {
+            printFamilyCardPreviewOnly();
+            return;
         }
+        if (!printAssignmentIsComplete()) {
+            recordsSweetAlert(
+                "warning",
+                "Complete print & assignment",
+                "Fill RFID number, ETAG, print date, and issued by before printing."
+            );
+            return;
+        }
+        var area = document.getElementById("printCardPreviewArea");
+        if (!area) return;
 
-        window.addEventListener("afterprint", cleanup);
-        window.print();
-        setTimeout(cleanup, 3000);
+        var root = buildEmployeeCr80PrintRoot(area);
+        if (!root) return;
+
+        printCr80InIframe({
+            root: root,
+            bodyClass: "print-card-preview",
+            printKind: "employee"
+        });
+    }
+
+    function printFamilyCardPreviewOnly() {
+        if (!printFamilyAssignmentIsComplete()) {
+            recordsSweetAlert(
+                "warning",
+                "Complete print & assignment",
+                "Fill RFID number, ETAG, print date, and issued by for this family card before printing."
+            );
+            return;
+        }
+        var area = document.getElementById("printCardPreviewAreaFamily");
+        if (!area) return;
+
+        var familyIdx = getSelectedFamilyCardIndex();
+        var familyRecord = printModalFamilyCards[familyIdx] || printModalFamilyCards[0];
+
+        prepareFamilyCr80PrintRoot(area, familyRecord).then(function (root) {
+            if (!root) return;
+
+            printCr80InIframe({
+                root: root,
+                previewSource: area,
+                bodyClass: "print-family-card-preview",
+                printKind: "family"
+            });
+        });
+    }
+
+    function downloadCardPreviewPdf() {
+        if (activePrintTab() === "family") {
+            downloadFamilyCardPreviewPdf();
+            return;
+        }
+        if (!printAssignmentIsComplete()) {
+            recordsSweetAlert(
+                "warning",
+                "Complete print & assignment",
+                "Fill RFID number, ETAG, print date, and issued by before downloading PDF."
+            );
+            return;
+        }
+        var area = document.getElementById("printCardPreviewArea");
+        if (!area) return;
+
+        var root = buildEmployeeCr80PrintRoot(area);
+        if (!root) return;
+
+        downloadCr80InIframe({
+            root: root,
+            previewSource: area,
+            bodyClass: "print-card-preview",
+            printKind: "employee"
+        });
+    }
+
+    function downloadFamilyCardPreviewPdf() {
+        if (!printFamilyAssignmentIsComplete()) {
+            recordsSweetAlert(
+                "warning",
+                "Complete print & assignment",
+                "Fill RFID number, ETAG, print date, and issued by for this family card before downloading PDF."
+            );
+            return;
+        }
+        var area = document.getElementById("printCardPreviewAreaFamily");
+        if (!area) return;
+
+        var familyIdx = getSelectedFamilyCardIndex();
+        var familyRecord = printModalFamilyCards[familyIdx] || printModalFamilyCards[0];
+
+        prepareFamilyCr80PrintRoot(area, familyRecord).then(function (root) {
+            if (!root) return;
+
+            downloadCr80InIframe({
+                root: root,
+                previewSource: area,
+                bodyClass: "print-family-card-preview",
+                printKind: "family"
+            });
+        });
     }
 
     function showDetail(id) {
@@ -2041,9 +2710,14 @@
         document.getElementById("printCardCloseFoot").addEventListener("click", closePrintModal);
         document.getElementById("printCardBackdrop").addEventListener("click", closePrintModal);
         document.getElementById("btnPrintCardPreview").addEventListener("click", printCardPreviewOnly);
+        var btnDownloadPdf = document.getElementById("btnDownloadCardPdf");
+        if (btnDownloadPdf) {
+            btnDownloadPdf.innerHTML = svgPdf + " Download PDF";
+            btnDownloadPdf.addEventListener("click", downloadCardPreviewPdf);
+        }
         $("#printCardModal").on(
             "input change",
-            "#printCardRfidNumber, #printCardPrintDate, #printCardIssuedBy, #printFamilyRfidNumber, #printFamilyPrintDate, #printFamilyIssuedBy",
+            "#printCardRfidNumber, #printCardEtag, #printCardPrintDate, #printCardIssuedBy, #printFamilyRfidNumber, #printFamilyEtag, #printFamilyPrintDate, #printFamilyIssuedBy",
             syncPrintCardButton
         );
         var btnSavePrint = document.getElementById("btnSavePrintAssignment");

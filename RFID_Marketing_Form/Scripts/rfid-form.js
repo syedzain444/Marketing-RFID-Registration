@@ -14,6 +14,8 @@ var RfidForm = (function () {
     var formMode = "default";
     var empLookupTimer = null;
     var recordsLookupUrl = null;
+    var empLookupExists = null;
+    var empLookupEmpId = "";
 
     function val(id) {
         var el = document.getElementById(id);
@@ -195,12 +197,7 @@ var RfidForm = (function () {
         if (onlyIntro) onlyIntro.classList.toggle("is-hidden", !isFamilyOnlyMode());
 
         var panelIntro = document.getElementById("nrFamilyPanelIntro");
-        if (panelIntro) panelIntro.classList.toggle("is-hidden", isFamilyOnlyMode());
-
-        var badge = document.getElementById("nrFamilyPanelBadge");
-        if (badge && !isFamilyOnlyMode()) {
-            badge.textContent = isFamilyMode() ? "New employee: complete Employee tab too" : "Fill employee tab first for new hires";
-        }
+        if (panelIntro) panelIntro.classList.add("is-hidden");
 
         var chk = document.getElementById("chkFamilyCard");
         if (chk) {
@@ -226,33 +223,113 @@ var RfidForm = (function () {
         clearEmpLookupHint();
         syncPhotoBrowseCaption();
         updatePassPhoto();
+        updateFlowBanner();
+    }
+
+    function updateFlowBanner() {
+        var banner = document.getElementById("nrFlowBanner");
+        if (!banner) return;
+        var text = "";
+        var variant = "default";
+        if (isFamilyOnlyMode()) {
+            text = "Existing employee — enter their ID on the Employee row, then fill dependent details below.";
+            variant = "family-only";
+        } else if (existingEmployeeBlocksFamilyCombo()) {
+            banner.classList.add("is-hidden");
+            banner.textContent = "";
+            banner.className = "nr-flow-banner is-hidden";
+            return;
+        } else if (isFamilyMode()) {
+            if (activeFormTab === "employee") {
+                text = "Step 1 of 2 — Enter the new employee, then open the Family tab.";
+                variant = "combo-employee";
+            } else {
+                text = "Step 2 of 2 — Dependent details (same Employee ID as step 1).";
+                variant = "combo-family";
+            }
+        }
+        if (!text) {
+            banner.classList.add("is-hidden");
+            banner.textContent = "";
+            banner.className = "nr-flow-banner is-hidden";
+            return;
+        }
+        banner.textContent = text;
+        banner.className = "nr-flow-banner nr-flow-banner--" + variant;
+    }
+
+    function existingEmployeeBlocksFamilyCombo() {
+        return !isFamilyOnlyMode() && empLookupExists === true;
+    }
+
+    function setEmpLookupHintEl(hintEl, text, kind) {
+        if (!hintEl) return;
+        if (!text) {
+            hintEl.textContent = "";
+            hintEl.classList.add("is-hidden");
+            hintEl.classList.remove("is-found", "is-missing");
+            return;
+        }
+        hintEl.textContent = text;
+        hintEl.classList.remove("is-hidden", "is-found", "is-missing");
+        if (kind) hintEl.classList.add(kind);
+    }
+
+    function notifyUseAddFamilyCard() {
+        return showNotice("validation", "Use Add family card", [
+            "This Employee ID is already on file. On Records, use + Add family card for a dependent pass—not Family card on New request."
+        ]);
+    }
+
+    function applyExistingEmployeeFamilyRestrictions(block) {
+        if (isFamilyOnlyMode()) return;
+        var toggleBar = document.getElementById("familyToggleBar");
+        var chk = document.getElementById("chkFamilyCard");
+        if (block) {
+            if (chk && chk.checked) {
+                chk.checked = false;
+                syncFamilyMode();
+            }
+            if (chk) chk.disabled = true;
+            if (toggleBar) toggleBar.classList.add("is-existing-emp-blocked");
+            if (activeFormTab === "family") setFormTab("employee", false);
+        } else {
+            if (chk && !isFamilyOnlyMode()) chk.disabled = false;
+            if (toggleBar) toggleBar.classList.remove("is-existing-emp-blocked");
+        }
     }
 
     function clearEmpLookupHint() {
-        var hint = document.getElementById("nrEmpLookupHint");
-        if (!hint) return;
-        hint.textContent = "";
-        hint.classList.add("is-hidden");
-        hint.classList.remove("is-found", "is-missing");
+        empLookupExists = null;
+        empLookupEmpId = "";
+        setEmpLookupHintEl(document.getElementById("nrEmpLookupHint"), "", null);
+        setEmpLookupHintEl(document.getElementById("nrEmpLookupHintEmployee"), "", null);
+        applyExistingEmployeeFamilyRestrictions(false);
+        updateFlowBanner();
     }
 
     function scheduleEmpLookup() {
-        if (!isFamilyOnlyMode() || !recordsLookupUrl) return;
+        if (!recordsLookupUrl) return;
         if (empLookupTimer) clearTimeout(empLookupTimer);
         empLookupTimer = setTimeout(runEmpLookup, 350);
     }
 
     function runEmpLookup() {
         empLookupTimer = null;
-        var hint = document.getElementById("nrEmpLookupHint");
-        if (!hint || !recordsLookupUrl) return;
+        if (!recordsLookupUrl) return;
+        var hintFamily = document.getElementById("nrEmpLookupHint");
+        var hintEmployee = document.getElementById("nrEmpLookupHintEmployee");
         var emp = val("txtEmpId");
         if (!emp) {
             clearEmpLookupHint();
             return;
         }
-        hint.textContent = "Checking employee ID…";
-        hint.classList.remove("is-hidden", "is-found", "is-missing");
+        var checking = "Checking employee ID…";
+        if (isFamilyOnlyMode()) {
+            setEmpLookupHintEl(hintFamily, checking, null);
+        } else {
+            setEmpLookupHintEl(hintEmployee, checking, null);
+        }
         fetch(recordsLookupUrl + (recordsLookupUrl.indexOf("?") >= 0 ? "&" : "?") + "action=lookupemp&empId=" + encodeURIComponent(emp), {
             cache: "no-store",
             credentials: "same-origin"
@@ -261,24 +338,56 @@ var RfidForm = (function () {
                 return res.json();
             })
             .then(function (data) {
+                if (val("txtEmpId") !== emp) return;
                 if (!data || !data.Ok) {
-                    hint.textContent = "Could not verify employee ID.";
-                    hint.classList.add("is-missing");
+                    empLookupExists = null;
+                    empLookupEmpId = emp;
+                    var errMsg = "Could not verify employee ID.";
+                    if (isFamilyOnlyMode()) setEmpLookupHintEl(hintFamily, errMsg, "is-missing");
+                    else setEmpLookupHintEl(hintEmployee, errMsg, "is-missing");
+                    applyExistingEmployeeFamilyRestrictions(false);
+                    updateFlowBanner();
                     return;
                 }
+                empLookupEmpId = emp;
                 if (data.Exists) {
-                    hint.textContent = data.EmployeeName
-                        ? "Employee on file: " + data.EmployeeName
-                        : "Employee ID found in RFID assignments.";
-                    hint.classList.add("is-found");
+                    empLookupExists = true;
+                    if (isFamilyOnlyMode()) {
+                        var foundFam = data.EmployeeName
+                            ? "Employee on file: " + data.EmployeeName
+                            : "Employee ID found in RFID assignments.";
+                        setEmpLookupHintEl(hintFamily, foundFam, "is-found");
+                    } else {
+                        var foundEmp = data.EmployeeName
+                            ? "On file: " + data.EmployeeName + ". Use + Add family card to add a dependent."
+                            : "Employee ID already on file. Use + Add family card to add a dependent.";
+                        setEmpLookupHintEl(hintEmployee, foundEmp, "is-found");
+                        applyExistingEmployeeFamilyRestrictions(true);
+                    }
                 } else {
-                    hint.textContent = "No RFID assignment for this ID. Use New request to create the employee first.";
-                    hint.classList.add("is-missing");
+                    empLookupExists = false;
+                    if (isFamilyOnlyMode()) {
+                        setEmpLookupHintEl(
+                            hintFamily,
+                            "No RFID assignment for this ID. Use New request to create the employee first.",
+                            "is-missing"
+                        );
+                    } else {
+                        setEmpLookupHintEl(hintEmployee, "", null);
+                        applyExistingEmployeeFamilyRestrictions(false);
+                    }
                 }
+                refreshMeter();
+                updateFlowBanner();
             })
             .catch(function () {
-                hint.textContent = "Could not verify employee ID.";
-                hint.classList.add("is-missing");
+                if (val("txtEmpId") !== emp) return;
+                empLookupExists = null;
+                var failMsg = "Could not verify employee ID.";
+                if (isFamilyOnlyMode()) setEmpLookupHintEl(hintFamily, failMsg, "is-missing");
+                else setEmpLookupHintEl(hintEmployee, failMsg, "is-missing");
+                applyExistingEmployeeFamilyRestrictions(false);
+                updateFlowBanner();
             });
     }
 
@@ -302,6 +411,10 @@ var RfidForm = (function () {
     function setFormTab(tab, animate) {
         if (animate === undefined) animate = true;
         tab = tab === "family" ? "family" : "employee";
+        if (tab === "family" && existingEmployeeBlocksFamilyCombo()) {
+            notifyUseAddFamilyCard();
+            tab = "employee";
+        }
         if (!isFamilyMode()) tab = "employee";
         activeFormTab = tab;
 
@@ -349,6 +462,7 @@ var RfidForm = (function () {
         refreshMeter();
         syncPhotoBrowseCaption();
         updatePassPhoto();
+        updateFlowBanner();
     }
 
     function syncFamilyMode() {
@@ -380,15 +494,19 @@ var RfidForm = (function () {
     }
 
     function onFamilyToggleChange() {
+        if (existingEmployeeBlocksFamilyCombo()) {
+            var blockChk = document.getElementById("chkFamilyCard");
+            if (blockChk) blockChk.checked = false;
+            notifyUseAddFamilyCard();
+            syncFamilyMode();
+            return;
+        }
         var on = isFamilyMode();
         syncFamilyMode();
-        var badge = document.getElementById("nrFamilyPanelBadge");
-        if (badge && !isFamilyOnlyMode()) {
-            badge.textContent = on ? "New employee: complete Employee tab too" : "Fill employee tab first for new hires";
-        }
-        if (on) setFormTab("family", true);
+        if (on) setFormTab("employee", true);
         syncPhotoBrowseCaption();
         updatePassPhoto();
+        updateFlowBanner();
     }
 
     function updateFamilyCardIdPreview() {
@@ -463,6 +581,15 @@ var RfidForm = (function () {
 
     function localFamilyIssues() {
         var issues = [];
+        if (existingEmployeeBlocksFamilyCombo()) {
+            issues.push(
+                issue(
+                    "emp",
+                    "This employee is already on file. Use + Add family card on Records—not Family card on New request."
+                )
+            );
+            return issues;
+        }
         var emp = val("txtEmpId");
         var status = radioValue("rblStatus");
         var forward = radioValue("rblForward");
@@ -636,11 +763,7 @@ var RfidForm = (function () {
             var apprText = approved === "Y" ? "Yes" : "No";
             var apprCls = approved === "Y" ? "badge badge--yes" : "badge badge--muted";
             var cardId = val("txtFamilyCardIdPreview");
-            var tabBadge = isFamilyMode()
-                ? '<span class="badge badge--muted">' + (previewTab === "family" ? "Family tab" : "Employee tab") + "</span>"
-                : "";
             chipsEl.innerHTML =
-                tabBadge +
                 '<span class="' + statusCls + '">' + escapeHtml(status) + "</span>" +
                 '<span class="' + apprCls + '">' + escapeHtml(apprText) + "</span>" +
                 (previewTab === "family" && cardId
@@ -741,12 +864,12 @@ var RfidForm = (function () {
                 onEdit();
             }
             if (window.RfidPhotos && window.RfidPhotos.uploadFile) {
-                window.RfidPhotos.uploadFile(file).then(function (data) {
+                window.RfidPhotos.uploadFile(file, { category: context }).then(function (data) {
                     if (data && data.ok && data.path) {
                         finishPath(data.path);
                         return;
                     }
-                    finishPath("Photos/" + file.name);
+                    finishPath("");
                     if (typeof Swal !== "undefined") {
                         Swal.fire({
                             icon: "warning",
@@ -755,7 +878,7 @@ var RfidForm = (function () {
                         });
                     }
                 }).catch(function () {
-                    finishPath("Photos/" + file.name);
+                    finishPath("");
                     if (typeof Swal !== "undefined") {
                         Swal.fire({
                             icon: "error",
@@ -765,7 +888,7 @@ var RfidForm = (function () {
                     }
                 });
             } else {
-                finishPath("Photos/" + file.name);
+                finishPath("");
             }
         });
     }
@@ -1192,6 +1315,7 @@ var RfidForm = (function () {
         resetFormValues();
         if (isFamilyOnlyMode() && val("txtEmpId")) runEmpLookup();
         refreshNewRequestHero();
+        updateFlowBanner();
     }
 
     function init() {

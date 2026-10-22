@@ -715,11 +715,18 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
-        public RfidRecordsResult UpdatePrintAssignment(decimal id, string issuedBy, string printDateText, string rfidNumber)
+        public RfidRecordsResult UpdatePrintAssignment(decimal id, string issuedBy, string printDateText, string rfidNumber, string etag)
         {
             if (id <= 0)
             {
                 return RfidRecordsResult.Fail("A valid record ID is required.");
+            }
+
+            string etagError;
+            etag = NormalizePrintEtag(etag, out etagError);
+            if (etagError != null)
+            {
+                return RfidRecordsResult.Fail(etagError);
             }
 
             rfidNumber = TrimMax(rfidNumber, 50);
@@ -801,12 +808,18 @@ namespace RFID_Marketing_Form.Data
                         }
                     }
 
-                    const string sql = "UPDATE {0} SET ISSUED_BY = :issued_by, PRINT_DATE = :print_date, RFID_NUMBER = :rfid_number WHERE ID = :id";
+                    if (!table.HasEtag)
+                    {
+                        return RfidRecordsResult.Fail("ETAG column is missing on the employee table. Run Sql/Add_Print_Etag_Column.sql.");
+                    }
+
+                    const string sql = "UPDATE {0} SET ISSUED_BY = :issued_by, PRINT_DATE = :print_date, RFID_NUMBER = :rfid_number, ETAG = :etag WHERE ID = :id";
                     using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, table.Qualified)))
                     {
                         AddVarchar(cmd, "issued_by", NullIfEmpty(issuedBy), 50);
                         AddDate(cmd, "print_date", printDate);
                         AddVarchar(cmd, "rfid_number", NullIfEmpty(rfidNumber), 50);
+                        AddVarchar(cmd, "etag", etag, 50);
                         AddNumber(cmd, "id", id);
                         int rows = cmd.ExecuteNonQuery();
                         if (!IsSuccessfulUpdate(rows))
@@ -826,11 +839,18 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
-        public RfidRecordsResult UpdateFamilyPrintAssignment(decimal familyId, string issuedBy, string printDateText, string rfidNumber)
+        public RfidRecordsResult UpdateFamilyPrintAssignment(decimal familyId, string issuedBy, string printDateText, string rfidNumber, string etag)
         {
             if (familyId <= 0)
             {
                 return RfidRecordsResult.Fail("A valid family card ID is required.");
+            }
+
+            string etagError;
+            etag = NormalizePrintEtag(etag, out etagError);
+            if (etagError != null)
+            {
+                return RfidRecordsResult.Fail(etagError);
             }
 
             rfidNumber = TrimMax(rfidNumber, 50);
@@ -934,12 +954,19 @@ namespace RFID_Marketing_Form.Data
                         }
                     }
 
-                    const string sql = "UPDATE {0} SET ISSUED_BY = :issued_by, PRINT_DATE = :print_date, RFID_NUMBER = :rfid_number WHERE ID = :id";
+                    var familyRef = ParseQualifiedTable(familyTable);
+                    if (!ColumnExists(conn, familyRef, "ETAG"))
+                    {
+                        return RfidRecordsResult.Fail("ETAG column is missing on the family table. Run Sql/Add_Print_Etag_Column.sql.");
+                    }
+
+                    const string sql = "UPDATE {0} SET ISSUED_BY = :issued_by, PRINT_DATE = :print_date, RFID_NUMBER = :rfid_number, ETAG = :etag WHERE ID = :id";
                     using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, familyTable)))
                     {
                         AddVarchar(cmd, "issued_by", NullIfEmpty(issuedBy), 50);
                         AddDate(cmd, "print_date", printDate);
                         AddVarchar(cmd, "rfid_number", NullIfEmpty(rfidNumber), 50);
+                        AddVarchar(cmd, "etag", etag, 50);
                         AddNumber(cmd, "id", familyId);
                         int rows = cmd.ExecuteNonQuery();
                         if (!IsSuccessfulUpdate(rows))
@@ -1281,9 +1308,19 @@ namespace RFID_Marketing_Form.Data
             }
 
             var familyTable = ResolveFamilyTableQualified();
-            const string sqlTemplate =
-                "SELECT ID, EMP_ID, DEPENDENT_ID, CARD_ID, CARD_NAME, RELATIONSHIP, CNIC, RFID_NUMBER, " +
-                "ISSUE_DATE, EXPIRY_DATE, IMAGE_PATH, STATUS, ISSUED_BY, PRINT_DATE, CREATED_DATE FROM {0} " +
+            var familyRef = ParseQualifiedTable(familyTable);
+            var hasEtag = ColumnExists(conn, familyRef, "ETAG");
+            var cols = new List<string>
+            {
+                "ID", "EMP_ID", "DEPENDENT_ID", "CARD_ID", "CARD_NAME", "RELATIONSHIP", "CNIC", "RFID_NUMBER",
+                "ISSUE_DATE", "EXPIRY_DATE", "IMAGE_PATH", "STATUS", "ISSUED_BY", "PRINT_DATE", "CREATED_DATE"
+            };
+            if (hasEtag)
+            {
+                cols.Add("ETAG");
+            }
+
+            var sqlTemplate = "SELECT " + string.Join(", ", cols.ToArray()) + " FROM {0} " +
                 "WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) ORDER BY DEPENDENT_ID";
 
             try
@@ -1295,7 +1332,7 @@ namespace RFID_Marketing_Form.Data
                     {
                         while (reader.Read())
                         {
-                            list.Add(new FamilyCardRecord
+                            var item = new FamilyCardRecord
                             {
                                 Id = ReadDecimal(reader["ID"]),
                                 EmpId = ReadString(reader, "EMP_ID"),
@@ -1312,7 +1349,13 @@ namespace RFID_Marketing_Form.Data
                                 IssuedBy = ReadString(reader, "ISSUED_BY"),
                                 PrintDate = ReadDateDisplay(reader, "PRINT_DATE"),
                                 CreatedDate = ReadDateDisplay(reader, "CREATED_DATE")
-                            });
+                            };
+                            if (hasEtag)
+                            {
+                                item.Etag = ReadString(reader, "ETAG");
+                            }
+
+                            list.Add(item);
                         }
                     }
                 }
@@ -1405,6 +1448,7 @@ namespace RFID_Marketing_Form.Data
 
             var familyRef = ParseQualifiedTable(familyTable);
             var hasRemarks = ColumnExists(conn, familyRef, "STATUS_REMARKS");
+            var hasEtag = ColumnExists(conn, familyRef, "ETAG");
             var cols = new List<string>
             {
                 "ID", "EMP_ID", "DEPENDENT_ID", "CARD_ID", "CARD_NAME", "RELATIONSHIP", "CNIC", "RFID_NUMBER",
@@ -1413,6 +1457,11 @@ namespace RFID_Marketing_Form.Data
             if (hasRemarks)
             {
                 cols.Add("STATUS_REMARKS");
+            }
+
+            if (hasEtag)
+            {
+                cols.Add("ETAG");
             }
 
             var sql = "SELECT " + string.Join(", ", cols.ToArray()) + " FROM " + familyTable + " WHERE ID = :id";
@@ -1450,6 +1499,11 @@ namespace RFID_Marketing_Form.Data
                         card.StatusRemarks = ReadString(reader, "STATUS_REMARKS");
                     }
 
+                    if (hasEtag)
+                    {
+                        card.Etag = ReadString(reader, "ETAG");
+                    }
+
                     return true;
                 }
             }
@@ -1470,6 +1524,7 @@ namespace RFID_Marketing_Form.Data
                 Relationship = card.Relationship,
                 CardId = card.CardId,
                 RfidNumber = card.RfidNumber,
+                Etag = card.Etag,
                 Status = card.Status,
                 StatusRemarks = card.StatusRemarks,
                 IssueDate = card.IssueDate,
@@ -1740,6 +1795,11 @@ namespace RFID_Marketing_Form.Data
             {
                 cols.Add("EMERGENCY_NO");
             }
+
+            if (table.HasEtag && !cols.Contains("ETAG"))
+            {
+                cols.Add("ETAG");
+            }
         }
 
         private static RfidRecord ReadRecordSummary(IDataReader reader, TableRef table)
@@ -1834,6 +1894,11 @@ namespace RFID_Marketing_Form.Data
             if (table.HasEmergencyNo)
             {
                 record.EmergencyNo = ReadString(reader, "EMERGENCY_NO");
+            }
+
+            if (table.HasEtag)
+            {
+                record.Etag = ReadString(reader, "ETAG");
             }
 
             return record;
@@ -2298,6 +2363,7 @@ namespace RFID_Marketing_Form.Data
             table.HasBloodGroup = ColumnExists(conn, table, "BLOOD_GROUP");
             table.HasCnic = ColumnExists(conn, table, "CNIC");
             table.HasEmergencyNo = ColumnExists(conn, table, "EMERGENCY_NO");
+            table.HasEtag = ColumnExists(conn, table, "ETAG");
             table.HasStatusRemarks = ColumnExists(conn, table, "STATUS_REMARKS");
         }
 
@@ -2612,6 +2678,26 @@ namespace RFID_Marketing_Form.Data
             return Convert.ToDecimal(value.ToString(), CultureInfo.InvariantCulture);
         }
 
+        private static string NormalizePrintEtag(string etag, out string error)
+        {
+            error = null;
+            etag = TrimMax(etag, 50);
+            if (string.IsNullOrWhiteSpace(etag))
+            {
+                error = "ETAG is required before printing.";
+                return null;
+            }
+
+            etag = etag.Trim();
+            if (!RfidValidator.IsRfid(etag))
+            {
+                error = "ETAG must use letters, numbers, spaces, hyphens, or colons (max 50).";
+                return null;
+            }
+
+            return etag;
+        }
+
         private class TableRef
         {
             public string Owner { get; set; }
@@ -2628,6 +2714,7 @@ namespace RFID_Marketing_Form.Data
             public bool HasBloodGroup { get; set; }
             public bool HasCnic { get; set; }
             public bool HasEmergencyNo { get; set; }
+            public bool HasEtag { get; set; }
             public bool HasStatusRemarks { get; set; }
             public bool HasIsForwardHod { get; set; }
             public string ForwardByColumn { get; set; }

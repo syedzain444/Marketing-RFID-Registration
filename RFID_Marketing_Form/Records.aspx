@@ -13,10 +13,11 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
     <link href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" rel="stylesheet" />
     <link href="Content/rfid.css" rel="stylesheet" />
-    <link href="Site.css?v=2" rel="stylesheet" />
+    <link href="Site.css?v=17" rel="stylesheet" />
+    <link href="Content/emp-id-card.css?v=5" rel="stylesheet" />
     <link href="Content/marketing-sidebar.css?v=4" rel="stylesheet" />
     <link href="Content/marketing-wide.css?v=1" rel="stylesheet" />
-    <link href="Content/rfid-records.css?v=4" rel="stylesheet" />
+    <link href="Content/rfid-records.css?v=9" rel="stylesheet" />
     <link href="Content/marketing-dashboard.css?v=2" rel="stylesheet" />
 </head>
 <body class="records-page marketing-app dashboard-v2">
@@ -154,6 +155,7 @@
                 <footer class="detail-modal__foot detail-modal__foot--split">
                     <button type="button" class="btn btn-primary" id="btnSavePrintAssignment">Save assignment</button>
                     <button type="button" class="btn btn-primary" id="btnPrintCardPreview">Print card</button>
+                    <button type="button" class="btn btn-primary" id="btnDownloadCardPdf">Download PDF</button>
                     <button type="button" class="btn btn-ghost" id="printCardCloseFoot">Close</button>
                 </footer>
             </div>
@@ -358,12 +360,16 @@
         <script>window.RFID_APP_ROOT = '<%= ResolveUrl("~/") %>';</script>
         <script>window.RFID_PERMISSIONS = <%= PermissionsJson ?? "{}" %>;</script>
         <script>window.RFID_RECORD_SCOPE = '<%= RecordScope ?? "employee" %>';</script>
+        <script>window.RFID_ISSUED_BY_DEFAULT = <%= IssuedByDefaultNameJson ?? "\"\"" %>;</script>
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
         <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-        <script src="Scripts/rfid-photos.js"></script>
+        <script src="Scripts/rfid-photos.js?v=4"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="Scripts/rfid-form.js?v=11"></script>
-        <script src="Scripts/rfid-records.js?v=20"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="Scripts/rfid-form.js?v=16"></script>
+        <script src="Scripts/qrcode.min.js?v=1"></script>
+        <script src="Scripts/rfid-records.js?v=36"></script>
     </form>
 </body>
 </html>

@@ -9,6 +9,8 @@ namespace RFID_Marketing_Form
     {
         protected string PermissionsJson { get; private set; }
         protected string UserLabel { get; private set; }
+        protected string IssuedByDefaultName { get; private set; }
+        protected string IssuedByDefaultNameJson { get; private set; }
         protected string RecordScope { get; private set; }
         protected bool IsFamilyView { get; private set; }
 
@@ -22,6 +24,11 @@ namespace RFID_Marketing_Form
             UserLabel = user == null
                 ? string.Empty
                 : (string.IsNullOrWhiteSpace(user.DisplayName) ? user.EmpId : user.DisplayName + " (" + user.EmpId + ")");
+
+            IssuedByDefaultName = user == null
+                ? string.Empty
+                : (string.IsNullOrWhiteSpace(user.DisplayName) ? (user.EmpId ?? string.Empty).Trim() : user.DisplayName.Trim());
+            IssuedByDefaultNameJson = new JavaScriptSerializer().Serialize(IssuedByDefaultName ?? string.Empty);
 
             var perms = MarketingAuthContext.Permissions(Context).ToList();
             PermissionsJson = new JavaScriptSerializer().Serialize(new

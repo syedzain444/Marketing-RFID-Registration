@@ -34,7 +34,7 @@
         <div class="new-request-family-toggle nr-toolbar__toggle" id="familyToggleBar">
             <div class="new-request-family-toggle__copy">
                 <strong class="new-request-family-toggle__title">Family card</strong>
-                <p class="new-request-family-toggle__hint">Save a new employee and family together, or add family to someone already on file</p>
+                <p class="new-request-family-toggle__hint">New hire only - employee and dependent in one save. Already on file? Use <strong>+ Add family card</strong>.</p>
             </div>
             <label class="family-switch" for="chkFamilyCard">
                 <input type="checkbox" id="chkFamilyCard" class="family-switch__input" />
@@ -48,6 +48,8 @@
         </div>
     </div>
 
+    <div id="nrFlowBanner" class="nr-flow-banner is-hidden" role="status" aria-live="polite"></div>
+
     <div class="nr-panels-viewport">
         <div class="nr-panels-track" id="nrPanelsTrack">
             <section class="nr-panel" id="nrPanelEmployee" role="tabpanel" aria-labelledby="nrTabEmployee">
@@ -55,6 +57,7 @@
                     <div class="detail-cell detail-cell--field field" data-field="emp">
                         <label class="detail-field-label" for="txtEmpId">Employee ID <span class="req">*</span></label>
                         <input type="text" id="txtEmpId" maxlength="20" class="nr-field-input" placeholder="25130" autocomplete="off" />
+                        <p id="nrEmpLookupHintEmployee" class="nr-emp-lookup-hint is-hidden" aria-live="polite"></p>
                     </div>
                     <div class="detail-cell detail-cell--field field" data-field="grade">
                         <label class="detail-field-label" for="txtGrade">Grade</label>
@@ -95,8 +98,8 @@
                 </div>
             </section>
             <section class="nr-panel nr-panel--family" id="nrPanelFamily" role="tabpanel" aria-labelledby="nrTabFamily" hidden="hidden" aria-hidden="true">
-                <p id="nrFamilyOnlyIntro" class="nr-family-only-intro is-hidden">Enter an employee ID that is already in RFID assignments, then complete the dependent details below.</p>
-                <p class="nr-family-panel__intro" id="nrFamilyPanelIntro">Dependent card <span class="nr-family-panel__badge" id="nrFamilyPanelBadge">Fill employee tab first for new hires</span></p>
+                <p id="nrFamilyOnlyIntro" class="nr-family-only-intro is-hidden" aria-hidden="true"></p>
+                <p class="nr-family-panel__intro is-hidden" id="nrFamilyPanelIntro" aria-hidden="true"><span class="nr-family-panel__badge" id="nrFamilyPanelBadge"></span></p>
                 <p id="nrEmpLookupHint" class="nr-emp-lookup-hint is-hidden" aria-live="polite"></p>
                 <div class="detail-fit-grid new-request-grid new-request-grid--dense new-request-grid--family" id="nrFamilyFields">
                     <div class="detail-cell detail-cell--field field" data-field="familyName">

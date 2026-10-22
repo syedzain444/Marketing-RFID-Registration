@@ -269,8 +269,8 @@
         </div>
         <script>window.RFID_APP_ROOT = '<%= ResolveUrl("~/") %>';</script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="Scripts/rfid-photos.js"></script>
-        <script src="Scripts/rfid-form.js?v=4"></script>
+        <script src="Scripts/rfid-photos.js?v=4"></script>
+        <script src="Scripts/rfid-form.js?v=7"></script>
     </form>
 </body>
 </html>

@@ -9,6 +9,29 @@ namespace RFID_Marketing_Form.Data
     public static class PhotoStorage
     {
         public const string PhotosFolder = "Photos";
+        public const string EmployeeSubfolder = "Employee";
+        public const string FamilySubfolder = "Family";
+
+        public static string NormalizePhotoCategory(string category)
+        {
+            if (string.Equals(category, FamilySubfolder, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(category, "family", StringComparison.OrdinalIgnoreCase))
+            {
+                return FamilySubfolder;
+            }
+
+            return EmployeeSubfolder;
+        }
+
+        public static string CategoryFromUploadFieldName(string fieldName)
+        {
+            if (string.Equals(fieldName, "familyPhoto", StringComparison.OrdinalIgnoreCase))
+            {
+                return FamilySubfolder;
+            }
+
+            return EmployeeSubfolder;
+        }
 
         public static string NormalizeRelativePath(string path)
         {
@@ -121,7 +144,10 @@ namespace RFID_Marketing_Form.Data
             var fileName = Path.GetFileName(relativePath.Replace('/', Path.DirectorySeparatorChar));
             if (!string.IsNullOrEmpty(fileName))
             {
-                candidates.Add(Path.Combine(GetPhotosPhysicalDirectory(context), fileName));
+                var photosDir = GetPhotosPhysicalDirectory(context);
+                candidates.Add(Path.Combine(photosDir, fileName));
+                candidates.Add(Path.Combine(photosDir, EmployeeSubfolder, fileName));
+                candidates.Add(Path.Combine(photosDir, FamilySubfolder, fileName));
             }
 
             for (int i = 0; i < candidates.Count; i++)
@@ -177,6 +203,11 @@ namespace RFID_Marketing_Form.Data
 
         public static string SavePostedPhoto(HttpContext context, HttpPostedFile file)
         {
+            return SavePostedPhoto(context, file, null);
+        }
+
+        public static string SavePostedPhoto(HttpContext context, HttpPostedFile file, string category)
+        {
             if (context == null || file == null || file.ContentLength <= 0)
             {
                 return null;
@@ -194,11 +225,27 @@ namespace RFID_Marketing_Form.Data
                 return null;
             }
 
+            var subfolder = NormalizePhotoCategory(category);
             var photosDir = GetPhotosPhysicalDirectory(context);
-            Directory.CreateDirectory(photosDir);
-            var fullPath = Path.Combine(photosDir, fileName);
+            var targetDir = Path.Combine(photosDir, subfolder);
+            Directory.CreateDirectory(targetDir);
+
+            var ext = Path.GetExtension(fileName);
+            if (string.IsNullOrEmpty(ext))
+            {
+                ext = ".png";
+            }
+
+            var baseName = Path.GetFileNameWithoutExtension(fileName);
+            if (string.IsNullOrWhiteSpace(baseName))
+            {
+                baseName = "photo";
+            }
+
+            var storedName = Guid.NewGuid().ToString("N") + "_" + baseName + ext;
+            var fullPath = Path.Combine(targetDir, storedName);
             file.SaveAs(fullPath);
-            return PhotosFolder + "/" + fileName;
+            return PhotosFolder + "/" + subfolder + "/" + storedName;
         }
 
         public static bool TrySavePostedPhoto(HttpContext context, out string relativePath)
@@ -225,7 +272,7 @@ namespace RFID_Marketing_Form.Data
                 return false;
             }
 
-            relativePath = SavePostedPhoto(context, upload);
+            relativePath = SavePostedPhoto(context, upload, CategoryFromUploadFieldName(fieldName));
             return !string.IsNullOrEmpty(relativePath);
         }
 

@@ -33,11 +33,20 @@ window.RfidPhotos = (function () {
         return appRoot() + "EmpPhoto.ashx?p=" + encodeURIComponent(p);
     }
 
-    function uploadFile(file) {
+    function normalizeCategory(category) {
+        return category === "family" ? "family" : "employee";
+    }
+
+    function uploadFile(file, options) {
+        options = options || {};
+        var category = normalizeCategory(options.category);
         var fd = new FormData();
         fd.append("file", file);
+        fd.append("category", category);
         return fetch(appRoot() + "PhotoUpload.ashx", { method: "POST", body: fd, credentials: "same-origin" })
-            .then(function (res) { return res.json(); });
+            .then(function (res) {
+                return res.json();
+            });
     }
 
     function displayUrl(path) {
