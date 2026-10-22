@@ -8,5 +8,8 @@ namespace RFID_Marketing_Form
         protected global::System.Web.UI.HtmlControls.HtmlAnchor lnkNewRequest;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor lnkAddFamily;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor lnkAdmin;
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl recordsHeading;
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl recordsSubtitle;
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl recordsPanelHint;
     }
 }

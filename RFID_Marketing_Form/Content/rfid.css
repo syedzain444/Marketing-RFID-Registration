@@ -507,7 +507,44 @@ label, .label {
     box-shadow: 0 1px 4px rgba(0, 77, 77, 0.2);
 }
 
+.pills--choice label.pill.is-selected,
+.pills--choice input:checked + label {
+    background: var(--teal);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 77, 77, 0.2);
+}
+
+#rblStatus label.pill.is-selected:has(input[value="Active"]),
+#rblStatus input[value="Active"]:checked + label {
+    background: #15803d;
+}
+
+#rblStatus label.pill.is-selected:has(input[value="Inactive"]),
+#rblStatus input[value="Inactive"]:checked + label {
+    background: #64748b;
+}
+
+#rblForward label.pill.is-selected:has(input[value="Y"]),
+#rblForward input[value="Y"]:checked + label,
+#rblApproved label.pill.is-selected:has(input[value="Y"]),
+#rblApproved input[value="Y"]:checked + label {
+    background: #15803d;
+}
+
+#rblForward label.pill.is-selected:has(input[value="N"]),
+#rblForward input[value="N"]:checked + label,
+#rblApproved label.pill.is-selected:has(input[value="N"]),
+#rblApproved input[value="N"]:checked + label {
+    background: #475569;
+}
+
 .pills-compact label { padding: 6px 12px; }
+
+.input-control--readonly[readonly] {
+    background: #f3f6f6;
+    color: var(--muted);
+    cursor: not-allowed;
+}
 
 /* —— Sidebar —— */
 .aside {

@@ -20,10 +20,34 @@ namespace RFID_Marketing_Form
 
         protected void Require(string permissionCode)
         {
-            if (!Can(permissionCode))
+            if (Can(permissionCode))
             {
-                throw new HttpException(403, "Access denied.");
+                return;
             }
+
+            if (!MarketingAuthContext.IsAuthenticated(Context))
+            {
+                RedirectToMarketingLogin();
+                return;
+            }
+
+            var landing = MarketingAuthContext.ResolveLandingUrl(Context);
+            Response.Redirect(landing, false);
+            Context.ApplicationInstance.CompleteRequest();
+        }
+
+        private void RedirectToMarketingLogin()
+        {
+            var login = VirtualPathUtility.ToAbsolute("~/MarketingLogin.aspx");
+            var returnUrl = Request.RawUrl;
+            if (!string.IsNullOrEmpty(returnUrl) &&
+                returnUrl.IndexOf("MarketingLogin.aspx", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                login += "?ReturnUrl=" + HttpUtility.UrlEncode(returnUrl);
+            }
+
+            Response.Redirect(login, false);
+            Context.ApplicationInstance.CompleteRequest();
         }
 
         protected MarketingUser CurrentMarketingUser()

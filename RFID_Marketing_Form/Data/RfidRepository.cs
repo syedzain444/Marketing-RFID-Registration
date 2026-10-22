@@ -135,6 +135,258 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
+        public RfidRecordsResult ListFamilyRecords()
+        {
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return RfidRecordsResult.Fail(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return RfidRecordsResult.Fail(blockedMessage);
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            try
+            {
+                var rows = new List<RfidRecord>();
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    var familyRef = ParseQualifiedTable(familyTable);
+                    var hasRemarks = ColumnExists(conn, familyRef, "STATUS_REMARKS");
+                    var listSql = BuildFamilyListSelect(familyTable, hasRemarks);
+                    using (var cmd = Command(conn, null, listSql))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            rows.Add(ReadFamilyListSummary(reader, hasRemarks));
+                        }
+                    }
+                }
+
+                return new RfidRecordsResult
+                {
+                    Ok = true,
+                    TableName = familyTable,
+                    Records = rows
+                };
+            }
+            catch (Exception ex)
+            {
+                var described = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, described);
+                return RfidRecordsResult.Fail(described);
+            }
+        }
+
+        public RfidRecordsResult GetFamilyRecord(decimal id)
+        {
+            if (id <= 0)
+            {
+                return RfidRecordsResult.Fail("A valid record ID is required.");
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return RfidRecordsResult.Fail(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return RfidRecordsResult.Fail(blockedMessage);
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    FamilyCardRecord card;
+                    if (!TryReadFamilyCardById(conn, familyTable, id, out card))
+                    {
+                        return RfidRecordsResult.Fail("Record not found.");
+                    }
+
+                    return new RfidRecordsResult
+                    {
+                        Ok = true,
+                        TableName = familyTable,
+                        Record = MapFamilyCardToRfidRecord(card),
+                        FamilyCards = new List<FamilyCardRecord> { card }
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                var described = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, described);
+                return RfidRecordsResult.Fail(described);
+            }
+        }
+
+        public RfidRecordsResult SetFamilyStatus(decimal id, string status, string remarks)
+        {
+            if (id <= 0)
+            {
+                return RfidRecordsResult.Fail("A valid record ID is required.");
+            }
+
+            status = CanonicalRecordStatus(status);
+            if (status == null)
+            {
+                return RfidRecordsResult.Fail("Status must be Active or Inactive.");
+            }
+
+            if (string.IsNullOrWhiteSpace(remarks))
+            {
+                return RfidRecordsResult.Fail("Please enter remarks for this status change.");
+            }
+
+            remarks = remarks.Trim();
+            if (remarks.Length > 500)
+            {
+                remarks = remarks.Substring(0, 500);
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return RfidRecordsResult.Fail(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return RfidRecordsResult.Fail(blockedMessage);
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    var familyRef = ParseQualifiedTable(familyTable);
+                    if (!ColumnExists(conn, familyRef, "STATUS_REMARKS"))
+                    {
+                        return RfidRecordsResult.Fail(
+                            "STATUS_REMARKS column is missing on the family table. Run Sql/Add_Status_Remarks_Column.sql.");
+                    }
+
+                    const string sql = "UPDATE {0} SET STATUS = :status, STATUS_REMARKS = :remarks WHERE ID = :id";
+                    using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, familyTable)))
+                    {
+                        AddVarchar(cmd, "status", status, 20);
+                        AddVarchar(cmd, "remarks", remarks, 500);
+                        AddNumber(cmd, "id", id);
+                        int rows = cmd.ExecuteNonQuery();
+                        if (!IsSuccessfulUpdate(rows))
+                        {
+                            return RfidRecordsResult.Fail("Record not found or status was not updated.");
+                        }
+                    }
+                }
+
+                return new RfidRecordsResult
+                {
+                    Ok = true,
+                    TableName = familyTable,
+                    Status = status,
+                    StatusRemarks = remarks
+                };
+            }
+            catch (Exception ex)
+            {
+                var described = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, described);
+                return RfidRecordsResult.Fail(described);
+            }
+        }
+
+        public RfidRecordsResult UpdateFamilyProfile(decimal id, string cardName, string relationship, string cnic, string photoPath)
+        {
+            if (id <= 0)
+            {
+                return RfidRecordsResult.Fail("A valid record ID is required.");
+            }
+
+            cardName = TrimMax(cardName, 100);
+            relationship = TrimMax(relationship, 50);
+            cnic = TrimMax(cnic, 20);
+            photoPath = TrimMax(photoPath, 500);
+
+            if (string.IsNullOrWhiteSpace(cardName))
+            {
+                return RfidRecordsResult.Fail("Card holder name is required.");
+            }
+
+            if (!RfidValidator.IsPersonName(cardName))
+            {
+                return RfidRecordsResult.Fail("Card holder name must be 1 to 100 characters.");
+            }
+
+            if (string.IsNullOrWhiteSpace(relationship))
+            {
+                return RfidRecordsResult.Fail("Relationship is required.");
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return RfidRecordsResult.Fail(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return RfidRecordsResult.Fail(blockedMessage);
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    const string sql =
+                        "UPDATE {0} SET CARD_NAME = :card_name, RELATIONSHIP = :relationship, CNIC = :cnic, IMAGE_PATH = :photo_path WHERE ID = :id";
+                    using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, familyTable)))
+                    {
+                        AddVarchar(cmd, "card_name", cardName, 100);
+                        AddVarchar(cmd, "relationship", relationship.ToUpperInvariant(), 50);
+                        AddVarchar(cmd, "cnic", NullIfEmpty(cnic), 20);
+                        AddVarchar(cmd, "photo_path", NullIfEmpty(photoPath), 500);
+                        AddNumber(cmd, "id", id);
+                        int rows = cmd.ExecuteNonQuery();
+                        if (!IsSuccessfulUpdate(rows))
+                        {
+                            return RfidRecordsResult.Fail("Family record not found or profile was not updated.");
+                        }
+                    }
+                }
+
+                return GetFamilyRecord(id);
+            }
+            catch (Exception ex)
+            {
+                var described = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, described);
+                return RfidRecordsResult.Fail(described);
+            }
+        }
+
         public RfidRecordsResult GetRecord(decimal id)
         {
             string cs;
@@ -1088,6 +1340,147 @@ namespace RFID_Marketing_Form.Data
             }
 
             return configured.ToUpperInvariant();
+        }
+
+        private static TableRef ParseQualifiedTable(string qualified)
+        {
+            qualified = (qualified ?? string.Empty).Trim().ToUpperInvariant();
+            var dot = qualified.IndexOf('.');
+            if (dot > 0)
+            {
+                return new TableRef
+                {
+                    Owner = qualified.Substring(0, dot),
+                    Name = qualified.Substring(dot + 1)
+                };
+            }
+
+            return new TableRef { Owner = "SPERS", Name = qualified };
+        }
+
+        private static string BuildFamilyListSelect(string familyTable, bool hasStatusRemarks)
+        {
+            var cols = new List<string>
+            {
+                "ID", "EMP_ID", "RFID_NUMBER", "STATUS", "ISSUE_DATE", "ISSUED_BY", "IS_APPROVED", "CREATED_DATE", "CARD_NAME", "RELATIONSHIP"
+            };
+            if (hasStatusRemarks)
+            {
+                cols.Add("STATUS_REMARKS");
+            }
+
+            return "SELECT " + string.Join(", ", cols.ToArray()) + " FROM " + familyTable + " ORDER BY ID DESC";
+        }
+
+        private static RfidRecord ReadFamilyListSummary(IDataReader reader, bool hasStatusRemarks)
+        {
+            var record = new RfidRecord
+            {
+                Id = ReadDecimal(reader, "ID"),
+                EmpId = ReadString(reader, "EMP_ID"),
+                RfidNumber = ReadString(reader, "RFID_NUMBER"),
+                Status = ReadString(reader, "STATUS"),
+                IssueDate = ReadDateDisplay(reader, "ISSUE_DATE"),
+                IssuedBy = ReadString(reader, "ISSUED_BY"),
+                IsApproved = FormatYesNo(reader, "IS_APPROVED"),
+                CreatedDate = ReadDateDisplay(reader, "CREATED_DATE"),
+                EmployeeName = ReadString(reader, "CARD_NAME"),
+                Relationship = ReadString(reader, "RELATIONSHIP")
+            };
+            if (hasStatusRemarks)
+            {
+                record.StatusRemarks = ReadString(reader, "STATUS_REMARKS");
+            }
+
+            return record;
+        }
+
+        private static bool TryReadFamilyCardById(OracleConnection conn, string familyTable, decimal id, out FamilyCardRecord card)
+        {
+            card = null;
+            if (conn == null || id <= 0)
+            {
+                return false;
+            }
+
+            var familyRef = ParseQualifiedTable(familyTable);
+            var hasRemarks = ColumnExists(conn, familyRef, "STATUS_REMARKS");
+            var cols = new List<string>
+            {
+                "ID", "EMP_ID", "DEPENDENT_ID", "CARD_ID", "CARD_NAME", "RELATIONSHIP", "CNIC", "RFID_NUMBER",
+                "ISSUE_DATE", "EXPIRY_DATE", "IMAGE_PATH", "STATUS", "ISSUED_BY", "PRINT_DATE", "CREATED_DATE", "IS_APPROVED"
+            };
+            if (hasRemarks)
+            {
+                cols.Add("STATUS_REMARKS");
+            }
+
+            var sql = "SELECT " + string.Join(", ", cols.ToArray()) + " FROM " + familyTable + " WHERE ID = :id";
+            using (var cmd = Command(conn, null, sql))
+            {
+                AddNumber(cmd, "id", id);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read())
+                    {
+                        return false;
+                    }
+
+                    card = new FamilyCardRecord
+                    {
+                        Id = ReadDecimal(reader, "ID"),
+                        EmpId = ReadString(reader, "EMP_ID"),
+                        DependentId = ReadDecimal(reader, "DEPENDENT_ID"),
+                        CardId = ReadString(reader, "CARD_ID"),
+                        CardName = ReadString(reader, "CARD_NAME"),
+                        Relationship = ReadString(reader, "RELATIONSHIP"),
+                        Cnic = ReadString(reader, "CNIC"),
+                        RfidNumber = ReadString(reader, "RFID_NUMBER"),
+                        IssueDate = ReadDateDisplay(reader, "ISSUE_DATE"),
+                        ExpiryDate = ReadDateDisplay(reader, "EXPIRY_DATE"),
+                        PhotoPath = ReadString(reader, "IMAGE_PATH"),
+                        Status = ReadString(reader, "STATUS"),
+                        IssuedBy = ReadString(reader, "ISSUED_BY"),
+                        PrintDate = ReadDateDisplay(reader, "PRINT_DATE"),
+                        CreatedDate = ReadDateDisplay(reader, "CREATED_DATE"),
+                        IsApproved = FormatYesNo(reader, "IS_APPROVED")
+                    };
+                    if (hasRemarks)
+                    {
+                        card.StatusRemarks = ReadString(reader, "STATUS_REMARKS");
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        private static RfidRecord MapFamilyCardToRfidRecord(FamilyCardRecord card)
+        {
+            if (card == null)
+            {
+                return null;
+            }
+
+            return new RfidRecord
+            {
+                Id = card.Id,
+                EmpId = card.EmpId,
+                EmployeeName = card.CardName,
+                Relationship = card.Relationship,
+                CardId = card.CardId,
+                RfidNumber = card.RfidNumber,
+                Status = card.Status,
+                StatusRemarks = card.StatusRemarks,
+                IssueDate = card.IssueDate,
+                ExpiryDate = card.ExpiryDate,
+                IssuedBy = card.IssuedBy,
+                PrintDate = card.PrintDate,
+                CreatedDate = card.CreatedDate,
+                IsApproved = card.IsApproved,
+                Cnic = card.Cnic,
+                PhotoPath = card.PhotoPath
+            };
         }
 
         public SaveResult Save(RfidInput input)

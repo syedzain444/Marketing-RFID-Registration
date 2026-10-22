@@ -30,6 +30,8 @@ namespace RFID_Marketing_Form
                 }
 
                 var repo = new RfidRepository();
+                var scope = (context.Request.QueryString["scope"] ?? context.Request.Form["scope"] ?? "employee").Trim().ToLowerInvariant();
+                var isFamilyScope = scope == "family";
 
             if (action == "detail")
             {
@@ -41,7 +43,7 @@ namespace RFID_Marketing_Form
                 }
                 else
                 {
-                    result = repo.GetRecord(id);
+                    result = isFamilyScope ? repo.GetFamilyRecord(id) : repo.GetRecord(id);
                 }
             }
             else if (action == "setstatus")
@@ -56,7 +58,7 @@ namespace RFID_Marketing_Form
                 else
                 {
                     var remarks = (context.Request["remarks"] ?? context.Request.QueryString["remarks"] ?? string.Empty).Trim();
-                    result = repo.SetStatus(id, status, remarks);
+                    result = isFamilyScope ? repo.SetFamilyStatus(id, status, remarks) : repo.SetStatus(id, status, remarks);
                 }
             }
             else if (action == "updateprofile")
@@ -79,6 +81,24 @@ namespace RFID_Marketing_Form
                         context.Request["bloodGroup"],
                         context.Request["cnic"],
                         context.Request["emergencyNo"],
+                        context.Request["photoPath"]);
+                }
+            }
+            else if (action == "updatefamilyprofile")
+            {
+                var idText = (context.Request["id"] ?? string.Empty).Trim();
+                decimal id;
+                if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0)
+                {
+                    result = RfidRecordsResult.Fail("A valid record ID is required.");
+                }
+                else
+                {
+                    result = repo.UpdateFamilyProfile(
+                        id,
+                        context.Request["cardName"],
+                        context.Request["relationship"],
+                        context.Request["cnic"],
                         context.Request["photoPath"]);
                 }
             }
@@ -132,7 +152,7 @@ namespace RFID_Marketing_Form
             }
                 else
                 {
-                    result = repo.ListRecords();
+                    result = isFamilyScope ? repo.ListFamilyRecords() : repo.ListRecords();
                 }
 
                 WriteJson(context, result);
@@ -181,6 +201,7 @@ namespace RFID_Marketing_Form
 
                     return true;
                 case "updateprofile":
+                case "updatefamilyprofile":
                     if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ActionRecordsEdit, out err))
                     {
                         denied = RfidRecordsResult.Fail(err);

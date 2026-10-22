@@ -20,11 +20,11 @@
 
         </a>
 
-        <a runat="server" id="navForm" Visible="false">
+        <a runat="server" id="navParentRecords" Visible="false">
 
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="9" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 19c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 19c0-1.8 1.4-3 3.5-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
 
-            New RFID Entry
+            Employee Family Records
 
         </a>
 

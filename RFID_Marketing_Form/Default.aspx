@@ -45,7 +45,7 @@
                 <div class="workspace">
                     <section class="status-card field" data-field="status">
                         <span class="status-card__label">Status</span>
-                        <asp:RadioButtonList ID="rblStatus" runat="server" RepeatLayout="Flow" CssClass="pills pills-segment">
+                        <asp:RadioButtonList ID="rblStatus" runat="server" RepeatLayout="Flow" CssClass="pills pills-segment pills--choice">
                             <asp:ListItem Value="Active" Selected="True">Active</asp:ListItem>
                             <asp:ListItem Value="Inactive">Inactive</asp:ListItem>
                         </asp:RadioButtonList>
@@ -142,12 +142,7 @@
                                 <div class="field" data-field="expiry">
                                     <label for="txtExpiryDate">Expiry date <span class="req cond" data-cond="expiry">*</span></label>
                                     <div class="input-shell input-shell--date">
-                                        <asp:TextBox ID="txtExpiryDate" runat="server" TextMode="Date" CssClass="input-control" />
-                                    </div>
-                                    <div class="chips-row">
-                                        <button type="button" class="chip-btn" data-months="6">6 mo</button>
-                                        <button type="button" class="chip-btn" data-months="12">1 yr</button>
-                                        <button type="button" class="chip-btn" data-months="24">2 yr</button>
+                                        <asp:TextBox ID="txtExpiryDate" runat="server" TextMode="Date" CssClass="input-control input-control--readonly" ReadOnly="true" aria-readonly="true" />
                                     </div>
                                 </div>
                             </div>
@@ -158,7 +153,7 @@
                             <div class="fields fields-review">
                                 <div class="field" data-field="forward">
                                     <span class="label">Forward to HOD</span>
-                                    <asp:RadioButtonList ID="rblForward" runat="server" RepeatLayout="Flow" CssClass="pills pills-segment pills-compact">
+                                    <asp:RadioButtonList ID="rblForward" runat="server" RepeatLayout="Flow" CssClass="pills pills-segment pills-compact pills--choice">
                                         <asp:ListItem Value="N" Selected="True">No</asp:ListItem>
                                         <asp:ListItem Value="Y">Yes</asp:ListItem>
                                     </asp:RadioButtonList>
@@ -187,10 +182,9 @@
                             <div class="fields fields-review">
                                 <div class="field" data-field="approved">
                                     <span class="label">Approved</span>
-                                    <asp:RadioButtonList ID="rblApproved" runat="server" RepeatLayout="Flow" CssClass="pills pills-segment pills-compact">
-                                        <asp:ListItem Value="" Selected="True">Not set</asp:ListItem>
+                                    <asp:RadioButtonList ID="rblApproved" runat="server" RepeatLayout="Flow" CssClass="pills pills-segment pills-compact pills--choice">
                                         <asp:ListItem Value="Y">Yes</asp:ListItem>
-                                        <asp:ListItem Value="N">No</asp:ListItem>
+                                        <asp:ListItem Value="N" Selected="True">No</asp:ListItem>
                                     </asp:RadioButtonList>
                                 </div>
                                 <div class="field" data-field="approvedDate">

@@ -518,14 +518,14 @@ var RfidForm = (function () {
             if (el) el.value = "";
         }
         var today = startOfDay(new Date());
-        var iso = addMonths(today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate()), 0);
+        var iso = isoFromDate(today);
         var issue = document.getElementById("txtIssueDate");
-        var expiry = document.getElementById("txtExpiryDate");
         if (issue) issue.value = iso;
-        if (expiry) expiry.value = addMonths(iso, 12);
+        syncExpiryFromIssue(iso);
         setRadio("rblStatus", "Active");
         setRadio("rblForward", "N");
-        setRadio("rblApproved", "");
+        setRadio("rblApproved", "N");
+        syncPillChoiceStyles();
         var famChk = document.getElementById("chkFamilyCard");
         if (famChk) {
             famChk.checked = isFamilyOnlyMode();
@@ -633,7 +633,7 @@ var RfidForm = (function () {
             var status = radioValue("rblStatus") || "Active";
             var approved = radioValue("rblApproved");
             var statusCls = status.toLowerCase() === "active" ? "badge badge--active" : "badge badge--muted";
-            var apprText = approved === "Y" ? "Yes" : approved === "N" ? "No" : "Not set";
+            var apprText = approved === "Y" ? "Yes" : "No";
             var apprCls = approved === "Y" ? "badge badge--yes" : "badge badge--muted";
             var cardId = val("txtFamilyCardIdPreview");
             var tabBadge = isFamilyMode()
@@ -1009,19 +1009,48 @@ var RfidForm = (function () {
         openCaptchaModal(document.getElementById("btnSaveAside") || document.getElementById("btnSave"));
     }
 
-    function addMonths(iso, months) {
-        var d = parseIso(iso) || startOfDay(new Date());
-        if (d === "bad") d = startOfDay(new Date());
-        var day = d.getDate();
-        d.setDate(1);
-        d.setMonth(d.getMonth() + months);
-        var last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-        d.setDate(Math.min(day, last));
+    function isoFromDate(d) {
         var m = String(d.getMonth() + 1);
         var dayText = String(d.getDate());
         if (m.length < 2) m = "0" + m;
         if (dayText.length < 2) dayText = "0" + dayText;
         return d.getFullYear() + "-" + m + "-" + dayText;
+    }
+
+    function addOneYear(iso) {
+        var d = parseIso(iso) || startOfDay(new Date());
+        if (d === "bad") d = startOfDay(new Date());
+        d.setFullYear(d.getFullYear() + 1);
+        return isoFromDate(d);
+    }
+
+    function syncExpiryFromIssue(issueIso) {
+        var issue = issueIso != null ? issueIso : val("txtIssueDate");
+        var expiry = document.getElementById("txtExpiryDate");
+        if (!expiry) return;
+        if (!issue) {
+            expiry.value = "";
+            return;
+        }
+        expiry.value = addOneYear(issue);
+    }
+
+    function syncPillChoiceStyles() {
+        var groups = document.querySelectorAll(".pills--choice");
+        for (var g = 0; g < groups.length; g++) {
+            var labels = groups[g].querySelectorAll("label.pill");
+            for (var i = 0; i < labels.length; i++) {
+                var input = labels[i].querySelector("input[type=\"radio\"]");
+                labels[i].classList.toggle("is-selected", !!(input && input.checked));
+            }
+            var inputs = groups[g].querySelectorAll("input[type=\"radio\"]");
+            for (var j = 0; j < inputs.length; j++) {
+                var lbl = inputs[j].nextElementSibling;
+                if (lbl && lbl.tagName === "LABEL") {
+                    lbl.classList.toggle("is-selected", inputs[j].checked);
+                }
+            }
+        }
     }
 
     function validateBeforeSubmit() {
@@ -1057,15 +1086,21 @@ var RfidForm = (function () {
             el.addEventListener("input", onEdit);
             el.addEventListener("change", onEdit);
         }
-        var radios = document.querySelectorAll("input[name=\"rblStatus\"], #rblForward input, #rblApproved input");
-        for (var r = 0; r < radios.length; r++) radios[r].addEventListener("change", onEdit);
-        var chips = document.querySelectorAll(".chip-btn");
-        for (var c = 0; c < chips.length; c++) {
-            chips[c].addEventListener("click", function () {
-                var months = Number(this.getAttribute("data-months"));
-                var base = val("txtIssueDate");
-                document.getElementById("txtExpiryDate").value = addMonths(base, months);
+        var radios = document.querySelectorAll("input[name=\"rblStatus\"], #rblForward input, #rblApproved input, .pills--choice input[type=\"radio\"]");
+        for (var r = 0; r < radios.length; r++) {
+            radios[r].addEventListener("change", function () {
+                syncPillChoiceStyles();
                 onEdit();
+            });
+        }
+        var issueEl = document.getElementById("txtIssueDate");
+        if (issueEl) {
+            issueEl.addEventListener("change", function () {
+                syncExpiryFromIssue();
+                onEdit();
+            });
+            issueEl.addEventListener("input", function () {
+                syncExpiryFromIssue();
             });
         }
         var clearBtn = document.getElementById("btnClear");
@@ -1161,6 +1196,8 @@ var RfidForm = (function () {
 
     function init() {
         bind();
+        syncExpiryFromIssue();
+        syncPillChoiceStyles();
         syncFamilyMode();
         syncPhotoBrowseCaption();
         onEdit();

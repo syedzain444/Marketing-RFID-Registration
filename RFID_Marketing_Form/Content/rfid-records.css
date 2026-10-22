@@ -1503,6 +1503,46 @@ table.records-table tbody tr:last-child td {
     background: #fff;
 }
 
+.pills--choice label.pill {
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pills--choice label.pill.is-selected,
+.pills--choice input:checked + label {
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 77, 77, 0.22);
+}
+
+#rblStatus label.pill.is-selected:has(input[value="Active"]),
+#rblStatus input[value="Active"]:checked + label {
+    background: #15803d;
+}
+
+#rblStatus label.pill.is-selected:has(input[value="Inactive"]),
+#rblStatus input[value="Inactive"]:checked + label {
+    background: #64748b;
+}
+
+#rblForward label.pill.is-selected:has(input[value="Y"]),
+#rblForward input[value="Y"]:checked + label,
+#rblApproved label.pill.is-selected:has(input[value="Y"]),
+#rblApproved input[value="Y"]:checked + label {
+    background: #15803d;
+}
+
+#rblForward label.pill.is-selected:has(input[value="N"]),
+#rblForward input[value="N"]:checked + label,
+#rblApproved label.pill.is-selected:has(input[value="N"]),
+#rblApproved input[value="N"]:checked + label {
+    background: #475569;
+}
+
+.nr-field-input--readonly[readonly] {
+    background: #f3f6f6;
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
 .nr-toolbar {
     display: flex;
     align-items: stretch;

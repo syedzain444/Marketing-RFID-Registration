@@ -7,7 +7,7 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RFID Records</title>
+    <title><%= IsFamilyView ? "Employee Family Records" : "RFID Records" %></title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
@@ -34,8 +34,8 @@
                 </span>
                 <span class="brand-divider" aria-hidden="true"></span>
                 <div class="brand-text">
-                    <h1>RFID Records</h1>
-                    <p class="subtitle">Browse saved card assignments from <span id="recordsTableLabel" class="mono-soft">—</span></p>
+                    <h1 runat="server" id="recordsHeading">RFID Records</h1>
+                    <p runat="server" id="recordsSubtitle" class="subtitle">Browse saved card assignments from <span id="recordsTableLabel" class="mono-soft">—</span></p>
                 </div>
             </div>
             <div class="actions dashboard-actions">
@@ -86,7 +86,7 @@
                 <div class="records-panel__head dash-panel__head">
                     <div>
                         <h2 class="records-panel__title">All records</h2>
-                        <p class="records-panel__hint">View and manage all RFID card assignments in the system.</p>
+                        <p runat="server" id="recordsPanelHint" class="records-panel__hint">View and manage all RFID card assignments in the system.</p>
                     </div>
                     <div id="recordsDtToolbar" class="dash-dt-toolbar"></div>
                 </div>
@@ -94,6 +94,22 @@
                 <div class="records-table-wrap">
                     <table id="recordsTable" class="display records-table" style="width:100%;">
                         <thead>
+                            <% if (IsFamilyView) { %>
+                            <tr>
+                                <th>ID</th>
+                                <th>Employee ID</th>
+                                <th>Card name</th>
+                                <th>Relationship</th>
+                                <th>RFID number</th>
+                                <th>Issue date</th>
+                                <th>Issued by</th>
+                                <th>Approved</th>
+                                <th>Created</th>
+                                <th>Status</th>
+                                <th>Status remarks</th>
+                                <th data-orderable="false">Actions</th>
+                            </tr>
+                            <% } else { %>
                             <tr>
                                 <th>ID</th>
                                 <th>Employee ID</th>
@@ -106,6 +122,7 @@
                                 <th>Status remarks</th>
                                 <th data-orderable="false">Actions</th>
                             </tr>
+                            <% } %>
                         </thead>
                         <tbody></tbody>
                     </table>
@@ -183,7 +200,7 @@
             <div class="detail-modal__sheet detail-modal__sheet--edit">
                 <button type="button" class="detail-modal__close" id="editClose" aria-label="Close">&times;</button>
                 <header class="edit-modal__head">
-                    <p class="edit-modal__eyebrow">Edit employee profile</p>
+                    <p class="edit-modal__eyebrow" id="editModalEyebrow">Edit employee profile</p>
                     <h2 id="editModalTitle" class="edit-modal__title">Employee</h2>
                     <p class="edit-modal__sub" id="editModalSub">Record —</p>
                 </header>
@@ -208,41 +225,75 @@
                         <div class="edit-employee-fields">
                             <input type="hidden" id="editRecordId" value="" />
                             <input type="hidden" id="editPhotoPath" value="" />
-                            <div class="edit-field">
-                                <label for="editEmpId">Employee ID</label>
-                                <input type="text" id="editEmpId" class="edit-input edit-input--readonly" readonly="readonly" />
+                            <div id="editEmployeeFieldsPanel">
+                                <div class="edit-field">
+                                    <label for="editEmpId">Employee ID</label>
+                                    <input type="text" id="editEmpId" class="edit-input edit-input--readonly" readonly="readonly" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editName">Name</label>
+                                    <input type="text" id="editName" class="edit-input" maxlength="100" placeholder="Full name" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editDesignation">Designation</label>
+                                    <input type="text" id="editDesignation" class="edit-input" maxlength="100" placeholder="Job title" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editDepartment">Department</label>
+                                    <input type="text" id="editDepartment" class="edit-input" maxlength="100" placeholder="Department" />
+                                </div>
+                                <div class="edit-field edit-field--full">
+                                    <label for="editProject">Project / Location</label>
+                                    <input type="text" id="editProject" class="edit-input" maxlength="100" placeholder="Site or city" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editJoiningDate">Joining date</label>
+                                    <input type="date" id="editJoiningDate" class="edit-input" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editBloodGroup">Blood group</label>
+                                    <input type="text" id="editBloodGroup" class="edit-input" maxlength="20" placeholder="e.g. O+" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editCnic">CNIC</label>
+                                    <input type="text" id="editCnic" class="edit-input" maxlength="20" placeholder="12345-1234567-1" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editEmergencyNo">Emergency #</label>
+                                    <input type="text" id="editEmergencyNo" class="edit-input" maxlength="30" placeholder="Contact number" />
+                                </div>
                             </div>
-                            <div class="edit-field">
-                                <label for="editName">Name</label>
-                                <input type="text" id="editName" class="edit-input" maxlength="100" placeholder="Full name" />
-                            </div>
-                            <div class="edit-field">
-                                <label for="editDesignation">Designation</label>
-                                <input type="text" id="editDesignation" class="edit-input" maxlength="100" placeholder="Job title" />
-                            </div>
-                            <div class="edit-field">
-                                <label for="editDepartment">Department</label>
-                                <input type="text" id="editDepartment" class="edit-input" maxlength="100" placeholder="Department" />
-                            </div>
-                            <div class="edit-field edit-field--full">
-                                <label for="editProject">Project / Location</label>
-                                <input type="text" id="editProject" class="edit-input" maxlength="100" placeholder="Site or city" />
-                            </div>
-                            <div class="edit-field">
-                                <label for="editJoiningDate">Joining date</label>
-                                <input type="date" id="editJoiningDate" class="edit-input" />
-                            </div>
-                            <div class="edit-field">
-                                <label for="editBloodGroup">Blood group</label>
-                                <input type="text" id="editBloodGroup" class="edit-input" maxlength="20" placeholder="e.g. O+" />
-                            </div>
-                            <div class="edit-field">
-                                <label for="editCnic">CNIC</label>
-                                <input type="text" id="editCnic" class="edit-input" maxlength="20" placeholder="12345-1234567-1" />
-                            </div>
-                            <div class="edit-field">
-                                <label for="editEmergencyNo">Emergency #</label>
-                                <input type="text" id="editEmergencyNo" class="edit-input" maxlength="30" placeholder="Contact number" />
+                            <div id="editFamilyFieldsPanel" class="is-hidden">
+                                <div class="edit-field">
+                                    <label for="editFamilyEmpId">Employee ID</label>
+                                    <input type="text" id="editFamilyEmpId" class="edit-input edit-input--readonly" readonly="readonly" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editFamilyCardName">Card holder name <span class="req">*</span></label>
+                                    <input type="text" id="editFamilyCardName" class="edit-input" maxlength="100" placeholder="As on card" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editFamilyRelationship">Relationship <span class="req">*</span></label>
+                                    <select id="editFamilyRelationship" class="edit-input">
+                                        <option value="">Select...</option>
+                                        <option value="SPOUSE">Spouse</option>
+                                        <option value="SON">Son</option>
+                                        <option value="DAUGHTER">Daughter</option>
+                                        <option value="FATHER">Father</option>
+                                        <option value="MOTHER">Mother</option>
+                                        <option value="BROTHER">Brother</option>
+                                        <option value="SISTER">Sister</option>
+                                        <option value="OTHER">Other</option>
+                                    </select>
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editFamilyCnic">CNIC</label>
+                                    <input type="text" id="editFamilyCnic" class="edit-input" maxlength="20" placeholder="42101-5200244-8" />
+                                </div>
+                                <div class="edit-field">
+                                    <label for="editFamilyCardId">Card ID</label>
+                                    <input type="text" id="editFamilyCardId" class="edit-input edit-input--readonly" readonly="readonly" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -306,12 +357,13 @@
 
         <script>window.RFID_APP_ROOT = '<%= ResolveUrl("~/") %>';</script>
         <script>window.RFID_PERMISSIONS = <%= PermissionsJson ?? "{}" %>;</script>
+        <script>window.RFID_RECORD_SCOPE = '<%= RecordScope ?? "employee" %>';</script>
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
         <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
         <script src="Scripts/rfid-photos.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="Scripts/rfid-form.js?v=11"></script>
-        <script src="Scripts/rfid-records.js?v=17"></script>
+        <script src="Scripts/rfid-records.js?v=20"></script>
     </form>
 </body>
 </html>

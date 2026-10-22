@@ -9,10 +9,15 @@ namespace RFID_Marketing_Form
     {
         protected string PermissionsJson { get; private set; }
         protected string UserLabel { get; private set; }
+        protected string RecordScope { get; private set; }
+        protected bool IsFamilyView { get; private set; }
 
         protected void Page_Load(object sender, EventArgs e)
         {
             Require(AppPermissionCodes.ScreenRecords);
+            var view = (Request.QueryString["view"] ?? string.Empty).Trim();
+            IsFamilyView = view.Equals("family", StringComparison.OrdinalIgnoreCase);
+            RecordScope = IsFamilyView ? "family" : "employee";
             var user = CurrentMarketingUser();
             UserLabel = user == null
                 ? string.Empty
@@ -38,7 +43,25 @@ namespace RFID_Marketing_Form
             lnkAddFamily.Visible = Can(AppPermissionCodes.ScreenForm);
             lnkAdmin.Visible = Can(AppPermissionCodes.ScreenAdmin);
 
-            SetMarketingNav(marketingSidebar, MarketingNavSection.Records);
+            if (IsFamilyView)
+            {
+                Page.Title = "Employee Family Records";
+                if (recordsHeading != null) recordsHeading.InnerText = "Employee Family Records";
+                if (recordsSubtitle != null)
+                {
+                    recordsSubtitle.InnerHtml =
+                        "Browse employee family cards from <span id=\"recordsTableLabel\" class=\"mono-soft\">SPERS.EMP_FAMILY_MARKETING</span>";
+                }
+                if (recordsPanelHint != null)
+                {
+                    recordsPanelHint.InnerText = "View and manage family RFID cards (card name, relationship, status, and print).";
+                }
+                SetMarketingNav(marketingSidebar, MarketingNavSection.ParentRecords);
+            }
+            else
+            {
+                SetMarketingNav(marketingSidebar, MarketingNavSection.Records);
+            }
         }
     }
 }

@@ -73,3 +73,47 @@ D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\daniel-leone-v7daTKlZzaw-unsplash.jpg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\BTK LOGO.png
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\551324.jpg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\.gitkeep
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\1.png
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\551324.jpg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\Bahira-Logo (1).png
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\BTK LOGO.png
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\daniel-leone-v7daTKlZzaw-unsplash.jpg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\WhatsApp Image 2026-03-15 at 8.45.10 PM.jpeg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\WhatsApp Image 2026-08-29 at 4.26.36 PM.jpeg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\zain-2.jpeg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Photos\zain.jpeg
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\RFID_Marketing_Form.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\RFID_Marketing_Form.pdb
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Antlr3.Runtime.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\AspNet.ScriptManager.jQuery.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\AspNet.ScriptManager.jQuery.UI.Combined.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.AspNet.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.Core.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.Consumer.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.RelyingParty.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\EntityFramework.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Microsoft.AspNet.Membership.OpenAuth.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Microsoft.AspNet.Web.Optimization.WebForms.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Microsoft.ScriptManager.MSAjax.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Microsoft.ScriptManager.WebForms.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Microsoft.Web.Infrastructure.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\Oracle.ManagedDataAccess.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\System.Web.Optimization.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\System.Web.Providers.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\WebGrease.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\EntityFramework.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.Core.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OAuth.Consumer.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.OpenId.RelyingParty.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\DotNetOpenAuth.AspNet.xml
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.dll
+D:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.pdb
+d:\Marketing-RFID-Registration\RFID_Marketing_Form\bin\RFID_Marketing_Form.dll.config
+d:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csproj.AssemblyReference.cache
+d:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Marketing_Form.csproj.CoreCompileInputs.cache
+d:\Marketing-RFID-Registration\RFID_Marketing_Form\obj\Debug\RFID_Mar.DCBA284B.Up2Date

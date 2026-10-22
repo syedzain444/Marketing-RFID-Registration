@@ -41,7 +41,7 @@ namespace RFID_Marketing_Form.Data
 
             input.ApproveId = TryParseApproveId(input.ApproveIdText);
             input.IssueDate = ParseRequiredDate(input.IssueDateText, "issue", "Issue date", issues);
-            input.ExpiryDate = ParseOptionalDate(input.ExpiryDateText, "expiry", "Expiry date", issues);
+            input.ExpiryDate = null;
             input.ApprovedDate = ParseOptionalDate(input.ApprovedDateText, "approvedDate", "Approved date", issues);
             input.ForwardOn = ParseOptionalDate(input.ForwardOnText, "forwardOn", "Forwarded on", issues);
             input.CreatedDate = DateTime.Now;
@@ -92,9 +92,9 @@ namespace RFID_Marketing_Form.Data
                 input.Status = CanonicalStatus(input.Status);
             }
 
-            if (input.IssueDate.HasValue && input.ExpiryDate.HasValue && input.ExpiryDate <= input.IssueDate)
+            if (input.IssueDate.HasValue)
             {
-                issues.Add(Issue("expiry", "Expiry date must be after the issue date."));
+                input.ExpiryDate = input.IssueDate.Value.AddYears(1);
             }
 
             if (input.IsForwardHod == "Y")

@@ -13,22 +13,22 @@ namespace RFID_Marketing_Form
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            Require(AppPermissionCodes.ScreenForm);
-            SetMarketingNav(marketingSidebar, MarketingNavSection.Form);
-            if (form1 != null)
+            if (!MarketingAuthContext.IsAuthenticated(Context))
             {
-                form1.Enctype = "multipart/form-data";
+                Require(AppPermissionCodes.ScreenRecords);
+                return;
             }
 
-            if (!IsPostBack)
+            var target = Can(AppPermissionCodes.ScreenRecords)
+                ? ResolveUrl("~/Records.aspx")
+                : MarketingAuthContext.ResolveLandingUrl(Context);
+            if (target.IndexOf("Default.aspx", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                ApplyDefaultDates();
-                ApplyPermissionUi();
+                target = ResolveUrl("~/MarketingLogin.aspx");
             }
-            else
-            {
-                ApplyPermissionUi();
-            }
+
+            Response.Redirect(target, false);
+            Context.ApplicationInstance.CompleteRequest();
         }
 
         private void ApplyPermissionUi()
@@ -119,7 +119,7 @@ namespace RFID_Marketing_Form
             ApplyDefaultDates();
             SetRadioListValue("rblStatus", "Active");
             SetRadioListValue("rblForward", "N");
-            SetRadioListValue("rblApproved", string.Empty);
+            SetRadioListValue("rblApproved", "N");
         }
 
         private RfidInput ReadInputForSave()

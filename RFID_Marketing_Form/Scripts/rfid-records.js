@@ -4,6 +4,11 @@
     var table = null;
     var cachedRows = [];
     var statusChangeCtx = null;
+    var printModalScope = "employee";
+
+    function isFamilyRecordsScope() {
+        return (window.RFID_RECORD_SCOPE || "employee") === "family";
+    }
 
     function perms() {
         return window.RFID_PERMISSIONS || {};
@@ -70,7 +75,11 @@
     }
 
     function recordsApiUrl(query) {
-        return "RfidRecords.ashx" + (query ? "?" + query : "");
+        var url = "RfidRecords.ashx" + (query ? "?" + query : "");
+        if (isFamilyRecordsScope()) {
+            url += (url.indexOf("?") >= 0 ? "&" : "?") + "scope=family";
+        }
+        return url;
     }
 
     function fetchJson(url, options) {
@@ -231,34 +240,59 @@
         document.getElementById("statApproved").textContent = String(approved);
     }
 
+    function relationshipTableCell(rel) {
+        var label = formatRelationshipLabel(rel || "");
+        if (!label || label === "FAMILY") return "—";
+        return esc(label);
+    }
+
+    function renderActionsCell(r) {
+        var parts = ['<div class="records-actions">'];
+        if (can("view")) {
+            parts.push('<button type="button" class="btn-view" data-id="' + esc(r.Id) + '">' + svgView + " View details</button>");
+        }
+        if (can("edit")) {
+            parts.push('<button type="button" class="btn-edit" data-id="' + esc(r.Id) + '">' + svgEdit + " Edit</button>");
+        }
+        parts.push(printCardButtonHtml(r));
+        parts.push('<button type="button" class="btn-row-more" aria-label="More actions">' + svgMore + "</button>");
+        parts.push("</div>");
+        return parts.join("");
+    }
+
     function renderTableRows(rows) {
         var data = [];
         for (var i = 0; i < rows.length; i++) {
             var r = rows[i];
-            data.push([
-                esc(r.Id),
-                esc(r.EmpId),
-                '<span class="rfid-mono">' + esc(r.RfidNumber) + "</span>",
-                esc(r.IssueDate || "—"),
-                issuerCell(r.IssuedBy),
-                approvedBadge(r.IsApproved),
-                esc(r.CreatedDate || "—"),
-                statusToggleCell(r),
-                statusRemarksCell(r.StatusRemarks),
-                (function () {
-                    var parts = ['<div class="records-actions">'];
-                    if (can("view")) {
-                        parts.push('<button type="button" class="btn-view" data-id="' + esc(r.Id) + '">' + svgView + " View details</button>");
-                    }
-                    if (can("edit")) {
-                        parts.push('<button type="button" class="btn-edit" data-id="' + esc(r.Id) + '">' + svgEdit + " Edit</button>");
-                    }
-                    parts.push(printCardButtonHtml(r));
-                    parts.push('<button type="button" class="btn-row-more" aria-label="More actions">' + svgMore + "</button>");
-                    parts.push("</div>");
-                    return parts.join("");
-                })()
-            ]);
+            if (isFamilyRecordsScope()) {
+                data.push([
+                    esc(r.Id),
+                    esc(r.EmpId),
+                    esc(r.EmployeeName || "—"),
+                    relationshipTableCell(r.Relationship),
+                    '<span class="rfid-mono">' + esc(r.RfidNumber) + "</span>",
+                    esc(r.IssueDate || "—"),
+                    issuerCell(r.IssuedBy),
+                    approvedBadge(r.IsApproved),
+                    esc(r.CreatedDate || "—"),
+                    statusToggleCell(r),
+                    statusRemarksCell(r.StatusRemarks),
+                    renderActionsCell(r)
+                ]);
+            } else {
+                data.push([
+                    esc(r.Id),
+                    esc(r.EmpId),
+                    '<span class="rfid-mono">' + esc(r.RfidNumber) + "</span>",
+                    esc(r.IssueDate || "—"),
+                    issuerCell(r.IssuedBy),
+                    approvedBadge(r.IsApproved),
+                    esc(r.CreatedDate || "—"),
+                    statusToggleCell(r),
+                    statusRemarksCell(r.StatusRemarks),
+                    renderActionsCell(r)
+                ]);
+            }
         }
         return data;
     }
@@ -267,6 +301,24 @@
         cachedRows = rows || [];
         var data = renderTableRows(cachedRows);
         if (!table) {
+            var columnDefs;
+            if (isFamilyRecordsScope()) {
+                columnDefs = [
+                    { targets: [0], className: "rfid-mono" },
+                    { targets: [4], orderable: true },
+                    { targets: [9], className: "dt-status", orderable: false },
+                    { targets: [10], className: "dt-status-remarks" },
+                    { targets: [11], className: "dt-actions" }
+                ];
+            } else {
+                columnDefs = [
+                    { targets: [0], className: "rfid-mono" },
+                    { targets: [2], orderable: true },
+                    { targets: [7], className: "dt-status", orderable: false },
+                    { targets: [8], className: "dt-status-remarks" },
+                    { targets: [9], className: "dt-actions" }
+                ];
+            }
             table = $("#recordsTable").DataTable({
                 data: data,
                 order: [[0, "desc"]],
@@ -274,7 +326,9 @@
                 lengthMenu: [[10, 15, 25, 50, -1], [10, 15, 25, 50, "All"]],
                 language: {
                     search: "",
-                    searchPlaceholder: "Search by name, ID or RFID tag",
+                    searchPlaceholder: isFamilyRecordsScope()
+                        ? "Search by card name, employee ID or RFID"
+                        : "Search by name, ID or RFID tag",
                     lengthMenu: "Show: _MENU_ rows",
                     info: "Showing _START_ to _END_ of _TOTAL_ records",
                     infoEmpty: "No records to show",
@@ -287,13 +341,7 @@
                 drawCallback: function () {
                     moveRecordsDtToolbar();
                 },
-                columnDefs: [
-                    { targets: [0], className: "rfid-mono" },
-                    { targets: [2], orderable: true },
-                    { targets: [7], className: "dt-status", orderable: false },
-                    { targets: [8], className: "dt-status-remarks" },
-                    { targets: [9], className: "dt-actions" }
-                ]
+                columnDefs: columnDefs
             });
         } else {
             table.clear();
@@ -583,6 +631,46 @@
             detailCell("Status remarks", record.StatusRemarks, true) +
             detailCell("HOD remarks", record.HodRemarks, true) +
             detailCell("Requester remarks", record.RequesterRemarks, true) +
+            "</dl></article>"
+        );
+    }
+
+    function renderFamilyDetail(record, family) {
+        family = family || {};
+        if (!record) return "<p class=\"detail-loading\">No data.</p>";
+        var name = (record.EmployeeName || family.CardName || "").trim();
+        var headline = name ? esc(name) : esc(record.EmpId || "—");
+        var subline =
+            "Employee ID <span class=\"rfid-mono\">" +
+            esc(record.EmpId || "—") +
+            "</span> · " +
+            esc(formatRelationshipLabel(family.Relationship || ""));
+
+        return (
+            '<article class="detail-fit">' +
+            '<header class="detail-mini">' +
+            renderPhotoBlock(record) +
+            '<div class="detail-mini__head">' +
+            '<p class="detail-mini__eyebrow">Employee family card · Record #' + esc(record.Id) + "</p>" +
+            "<h3 class=\"detail-mini__title\">" + headline + "</h3>" +
+            '<p class="detail-mini__sub">' + subline + "</p>" +
+            '<div class="detail-mini__chips">' +
+            statusBadge(record.Status) +
+            approvedBadge(record.IsApproved) +
+            '<span class="badge badge--muted">RFID <span class="rfid-mono">' + esc(record.RfidNumber || "—") + "</span></span></div>" +
+            "</div></header>" +
+            '<dl class="detail-fit-grid">' +
+            detailCell("Card ID", family.CardId) +
+            detailCell("Dependent #", family.DependentId) +
+            detailCell("Relationship", formatRelationshipLabel(family.Relationship)) +
+            detailCell("CNIC", record.Cnic) +
+            detailCell("Issue date", record.IssueDate) +
+            detailCell("Expiry date", record.ExpiryDate) +
+            detailCell("Print date", record.PrintDate) +
+            detailCell("Created date", record.CreatedDate) +
+            detailCell("Issued by", record.IssuedBy) +
+            detailCell("Approved", record.IsApproved === "Yes" ? "Yes" : record.IsApproved === "No" ? "No" : record.IsApproved) +
+            detailCell("Status remarks", record.StatusRemarks, true) +
             "</dl></article>"
         );
     }
@@ -914,6 +1002,43 @@
         );
     }
 
+    function renderFamilyStandalonePrintLayout(family) {
+        if (!family) {
+            return '<p class="detail-loading">No family card data.</p>';
+        }
+        var name = (family.CardName || "").trim();
+        var subtitle = name
+            ? name + " · " + formatRelationshipLabel(family.Relationship)
+            : "Record #" + (family.Id || "—");
+        return (
+            '<article class="print-card-layout">' +
+            '<header class="print-card-layout__head">' +
+            '<div class="print-card-layout__head-main">' +
+            "<h3>Employee Family ID card preview</h3>" +
+            "<p>" + esc(subtitle) + "</p></div></header>" +
+            '<div class="print-card-layout__split">' +
+            '<section class="print-card-layout__cards print-card-layout__cards--family">' +
+            '<p class="print-card-layout__cards-title">Family pass (front &amp; back)</p>' +
+            '<div class="family-preview-side-toggle no-print-in-modal">' +
+            '<button type="button" class="family-side-btn is-active" data-family-side="front">Show front</button>' +
+            '<button type="button" class="family-side-btn" data-family-side="back">Show back</button></div>' +
+            '<div id="printFamilyPreviewHost">' + renderFamilyIdCardBlock(family) + "</div></section>" +
+            '<section class="print-card-layout__form">' +
+            renderFamilyPrintFormPanel(family) +
+            "</section></div></article>"
+        );
+    }
+
+    function bindFamilyStandalonePrintUi(family) {
+        printModalFamilyCards = family ? [family] : [];
+        document.querySelectorAll(".family-side-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                setFamilyPreviewSide(btn.getAttribute("data-family-side"));
+            });
+        });
+        setFamilyPreviewSide("front");
+    }
+
     function renderEmployeePrintFormPanel(record) {
         return (
             '<p class="print-card-layout__form-title">Print &amp; assignment</p>' +
@@ -1098,6 +1223,7 @@
 
     function closePrintModal() {
         document.getElementById("printCardModal").classList.add("is-hidden");
+        printModalScope = "employee";
         if (document.getElementById("detailModal").classList.contains("is-hidden")) {
             document.body.style.overflow = "";
         }
@@ -1153,6 +1279,9 @@
     }
 
     function activePrintTab() {
+        if (printModalScope === "family-only") {
+            return "family";
+        }
         var active = document.querySelector(".print-card-tab.is-active");
         return active ? active.getAttribute("data-print-tab") : "employee";
     }
@@ -1223,7 +1352,20 @@
             body: body.toString()
         })
             .then(function (payload) {
-                if (!payload || !payload.Ok || !payload.Record) {
+                if (!payload || !payload.Ok) {
+                    throw new Error((payload && payload.Error) || "Unable to save assignment.");
+                }
+                if (isFamilyRecordsScope() && isFamily) {
+                    showFamilyRecordPrintCard(id);
+                    syncPrintCardButton();
+                    loadRecords();
+                    return recordsSweetAlert(
+                        "success",
+                        "Assignment saved",
+                        "Print and assignment details were saved for family card #" + id + "."
+                    );
+                }
+                if (!payload.Record) {
                     throw new Error((payload && payload.Error) || "Unable to save assignment.");
                 }
                 var r = payload.Record;
@@ -1255,7 +1397,55 @@
             });
     }
 
+    function showFamilyRecordPrintCard(id) {
+        var body = document.getElementById("printCardBody");
+        body.innerHTML = '<p class="detail-loading">Loading…</p>';
+        printModalScope = "family-only";
+        openPrintModal();
+
+        fetchJson(recordsApiUrl("action=detail&id=" + encodeURIComponent(id)), { cache: "no-store" })
+            .then(function (payload) {
+                if (!payload || !payload.Ok) {
+                    body.innerHTML =
+                        "<p class=\"detail-loading\">" + esc((payload && payload.Error) || "Unable to load record.") + "</p>";
+                    return;
+                }
+                var family = (payload.FamilyCards && payload.FamilyCards[0]) || null;
+                if (!family && payload.Record) {
+                    family = {
+                        Id: payload.Record.Id,
+                        EmpId: payload.Record.EmpId,
+                        CardName: payload.Record.EmployeeName,
+                        RfidNumber: payload.Record.RfidNumber,
+                        IssueDate: payload.Record.IssueDate,
+                        ExpiryDate: payload.Record.ExpiryDate,
+                        IssuedBy: payload.Record.IssuedBy,
+                        PrintDate: payload.Record.PrintDate,
+                        CreatedDate: payload.Record.CreatedDate,
+                        Status: payload.Record.Status,
+                        Cnic: payload.Record.Cnic,
+                        PhotoPath: payload.Record.PhotoPath
+                    };
+                }
+                if (!family) {
+                    body.innerHTML = "<p class=\"detail-loading\">Unable to load family card.</p>";
+                    return;
+                }
+                body.innerHTML = renderFamilyStandalonePrintLayout(family);
+                bindFamilyStandalonePrintUi(family);
+                syncPrintCardButton();
+            })
+            .catch(function (err) {
+                body.innerHTML =
+                    "<p class=\"detail-loading\">" + esc((err && err.message) || "Network error while loading record.") + "</p>";
+            });
+    }
+
     function showPrintCard(id) {
+        if (isFamilyRecordsScope()) {
+            showFamilyRecordPrintCard(id);
+            return;
+        }
         var body = document.getElementById("printCardBody");
         body.innerHTML = '<p class="detail-loading">Loading…</p>';
         openPrintModal();
@@ -1334,7 +1524,46 @@
         showEditError("");
     }
 
+    function setEditUiMode(mode) {
+        var isFamily = mode === "family";
+        var empPanel = document.getElementById("editEmployeeFieldsPanel");
+        var famPanel = document.getElementById("editFamilyFieldsPanel");
+        var eyebrow = document.getElementById("editModalEyebrow");
+        if (empPanel) empPanel.classList.toggle("is-hidden", isFamily);
+        if (famPanel) famPanel.classList.toggle("is-hidden", !isFamily);
+        if (eyebrow) {
+            eyebrow.textContent = isFamily ? "Edit family card profile" : "Edit employee profile";
+        }
+    }
+
+    function populateFamilyEditForm(record, family) {
+        family = family || {};
+        setEditUiMode("family");
+        document.getElementById("editRecordId").value = record.Id != null ? String(record.Id) : "";
+        document.getElementById("editPhotoPath").value = record.PhotoPath || family.PhotoPath || "";
+        document.getElementById("editFamilyEmpId").value = record.EmpId || family.EmpId || "";
+        document.getElementById("editFamilyCardName").value = record.EmployeeName || family.CardName || "";
+        document.getElementById("editFamilyCnic").value = record.Cnic || family.Cnic || "";
+        document.getElementById("editFamilyCardId").value = family.CardId || record.CardId || "";
+        var relEl = document.getElementById("editFamilyRelationship");
+        var rel = (family.Relationship || record.Relationship || "").trim().toUpperCase();
+        if (relEl) {
+            relEl.value = rel;
+            if (rel && relEl.value !== rel) {
+                relEl.value = "OTHER";
+            }
+        }
+
+        var name = (record.EmployeeName || family.CardName || "").trim() || record.EmpId || "Family member";
+        document.getElementById("editModalTitle").textContent = name;
+        document.getElementById("editModalSub").textContent =
+            "Record #" + (record.Id || "—") + " · Employee ID " + (record.EmpId || "—");
+
+        setEditPhotoPreview(record.PhotoPath || family.PhotoPath || "");
+    }
+
     function populateEditForm(record) {
+        setEditUiMode("employee");
         document.getElementById("editRecordId").value = record.Id != null ? String(record.Id) : "";
         document.getElementById("editPhotoPath").value = record.PhotoPath || "";
         document.getElementById("editEmpId").value = record.EmpId || "";
@@ -1368,15 +1597,19 @@
     function resetEditForm() {
         var ids = [
             "editRecordId", "editPhotoPath", "editEmpId", "editName", "editDesignation",
-            "editDepartment", "editProject", "editJoiningDate", "editBloodGroup", "editCnic", "editEmergencyNo"
+            "editDepartment", "editProject", "editJoiningDate", "editBloodGroup", "editCnic", "editEmergencyNo",
+            "editFamilyEmpId", "editFamilyCardName", "editFamilyCnic", "editFamilyCardId"
         ];
         ids.forEach(function (elId) {
             var el = document.getElementById(elId);
             if (el) el.value = "";
         });
+        var relEl = document.getElementById("editFamilyRelationship");
+        if (relEl) relEl.value = "";
         var file = document.getElementById("editPhotoFile");
         if (file) file.value = "";
         setEditPhotoPreview("");
+        setEditUiMode(isFamilyRecordsScope() ? "family" : "employee");
     }
 
     function showEdit(id) {
@@ -1392,7 +1625,11 @@
                     showEditError((payload && payload.Error) || "Unable to load record.");
                     return;
                 }
-                populateEditForm(payload.Record);
+                if (isFamilyRecordsScope()) {
+                    populateFamilyEditForm(payload.Record, (payload.FamilyCards && payload.FamilyCards[0]) || null);
+                } else {
+                    populateEditForm(payload.Record);
+                }
             })
             .catch(function (err) {
                 showEditError((err && err.message) || "Network error while loading record.");
@@ -1408,6 +1645,19 @@
             return;
         }
 
+        if (isFamilyRecordsScope()) {
+            var cardName = (document.getElementById("editFamilyCardName").value || "").trim();
+            var relationship = (document.getElementById("editFamilyRelationship").value || "").trim();
+            if (!cardName) {
+                showEditError("Card holder name is required.");
+                return;
+            }
+            if (!relationship) {
+                showEditError("Relationship is required.");
+                return;
+            }
+        }
+
         var btn = document.getElementById("btnSaveEdit");
         var btnLabel = btn.textContent;
         btn.disabled = true;
@@ -1416,17 +1666,26 @@
         function postProfile(photoPath) {
             var body = new URLSearchParams();
             body.append("id", id);
-            body.append("employeeName", document.getElementById("editName").value.trim());
-            body.append("designation", document.getElementById("editDesignation").value.trim());
-            body.append("department", document.getElementById("editDepartment").value.trim());
-            body.append("projectLocation", document.getElementById("editProject").value.trim());
-            body.append("joiningDate", document.getElementById("editJoiningDate").value.trim());
-            body.append("bloodGroup", document.getElementById("editBloodGroup").value.trim());
-            body.append("cnic", document.getElementById("editCnic").value.trim());
-            body.append("emergencyNo", document.getElementById("editEmergencyNo").value.trim());
             body.append("photoPath", photoPath || "");
+            var action;
+            if (isFamilyRecordsScope()) {
+                action = "action=updatefamilyprofile";
+                body.append("cardName", document.getElementById("editFamilyCardName").value.trim());
+                body.append("relationship", document.getElementById("editFamilyRelationship").value.trim());
+                body.append("cnic", document.getElementById("editFamilyCnic").value.trim());
+            } else {
+                action = "action=updateprofile";
+                body.append("employeeName", document.getElementById("editName").value.trim());
+                body.append("designation", document.getElementById("editDesignation").value.trim());
+                body.append("department", document.getElementById("editDepartment").value.trim());
+                body.append("projectLocation", document.getElementById("editProject").value.trim());
+                body.append("joiningDate", document.getElementById("editJoiningDate").value.trim());
+                body.append("bloodGroup", document.getElementById("editBloodGroup").value.trim());
+                body.append("cnic", document.getElementById("editCnic").value.trim());
+                body.append("emergencyNo", document.getElementById("editEmergencyNo").value.trim());
+            }
 
-            return fetchJson(recordsApiUrl("action=updateprofile"), {
+            return fetchJson(recordsApiUrl(action), {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: body.toString(),
@@ -1457,7 +1716,12 @@
                     throw new Error(apiError(payload) || "Save failed. Rebuild the web project so updateprofile is deployed.");
                 }
                 closeEditModal();
-                showAlert("Employee profile saved for record #" + id + ".", false);
+                showAlert(
+                    isFamilyRecordsScope()
+                        ? "Family card profile saved for record #" + id + "."
+                        : "Employee profile saved for record #" + id + ".",
+                    false
+                );
                 loadRecords();
             })
             .catch(function (err) {
@@ -1576,10 +1840,18 @@
                 var r = payload.Record;
                 var name = primaryName(r);
                 if (title) {
-                    title.textContent = name ? name + " (" + (r.EmpId || "") + ")" : "Employee " + (r.EmpId || "—");
+                    if (isFamilyRecordsScope()) {
+                        title.textContent = name ? name + " (" + (r.EmpId || "") + ")" : "Family record " + (r.EmpId || "—");
+                    } else {
+                        title.textContent = name ? name + " (" + (r.EmpId || "") + ")" : "Employee " + (r.EmpId || "—");
+                    }
                 }
                 try {
-                    body.innerHTML = renderDetail(r);
+                    if (isFamilyRecordsScope()) {
+                        body.innerHTML = renderFamilyDetail(r, (payload.FamilyCards && payload.FamilyCards[0]) || null);
+                    } else {
+                        body.innerHTML = renderDetail(r);
+                    }
                 } catch (renderErr) {
                     body.innerHTML = "<p class=\"detail-loading\">" + esc((renderErr && renderErr.message) || "Could not display record details.") + "</p>";
                 }

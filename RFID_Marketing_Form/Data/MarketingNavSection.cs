@@ -4,6 +4,7 @@ namespace RFID_Marketing_Form.Data
     {
         None = 0,
         Records,
+        ParentRecords,
         Form,
         Users,
         Roles

@@ -85,13 +85,6 @@ namespace RFID_Marketing_Form.App
         private static void EnforceScreenAccess(HttpContext context, string appRelativePath)
         {
             var file = appRelativePath.ToLowerInvariant();
-            if (file.EndsWith("default.aspx", StringComparison.Ordinal) &&
-                !MarketingAuthContext.HasPermission(context, AppPermissionCodes.ScreenForm))
-            {
-                Deny(context, "You cannot open the RFID request form.");
-                return;
-            }
-
             if (file.EndsWith("records.aspx", StringComparison.Ordinal) &&
                 !MarketingAuthContext.HasPermission(context, AppPermissionCodes.ScreenRecords))
             {

@@ -51,7 +51,7 @@ namespace RFID_Marketing_Form.Data
             input.Id = null;
             input.ApproveId = TryParseId(input.ApproveIdText);
             input.IssueDate = ParseDate(input.IssueDateText, "issue", "Issue date", issues);
-            input.ExpiryDate = ParseDate(input.ExpiryDateText, "expiry", "Expiry date", issues);
+            input.ExpiryDate = null;
             input.PrintDate = ParseOptionalDate(input.PrintDateText, "print", "Print date", issues);
             if (Clean(input.CreatedDateText).Length == 0)
             {
@@ -129,16 +129,7 @@ namespace RFID_Marketing_Form.Data
             if (input.IssueDate.HasValue)
             {
                 BoundDate(issues, "issue", "Issue date", input.IssueDate.Value, new DateTime(2000, 1, 1), today.AddDays(30));
-            }
-
-            if (input.IssueDate.HasValue && input.ExpiryDate.HasValue && input.ExpiryDate.Value.Date <= input.IssueDate.Value.Date)
-            {
-                issues.Add(Issue("expiry", "Expiry date must be after the issue date."));
-            }
-
-            if (input.ExpiryDate.HasValue)
-            {
-                BoundDate(issues, "expiry", "Expiry date", input.ExpiryDate.Value, new DateTime(2000, 1, 1), today.AddYears(20));
+                input.ExpiryDate = input.IssueDate.Value.AddYears(1);
             }
 
             if (input.PrintDate.HasValue && input.IssueDate.HasValue && input.PrintDate.Value.Date < input.IssueDate.Value.Date)
@@ -205,9 +196,13 @@ namespace RFID_Marketing_Form.Data
                 issues.Add(Issue("approvedDate", "Approved date cannot be before the created date."));
             }
 
-            if (input.IsApproved.Length > 0 && input.IsApproved != "Y" && input.IsApproved != "N")
+            if (input.IsApproved.Length == 0)
             {
-                issues.Add(Issue("approved", "Approved must be Yes, No, or left unset."));
+                input.IsApproved = "N";
+            }
+            else if (input.IsApproved != "Y" && input.IsApproved != "N")
+            {
+                issues.Add(Issue("approved", "Approved must be Yes or No."));
             }
 
             return issues;

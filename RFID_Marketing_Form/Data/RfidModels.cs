@@ -76,6 +76,8 @@ namespace RFID_Marketing_Form.Data
         public decimal Id { get; set; }
         public string EmpId { get; set; }
         public string EmployeeName { get; set; }
+        public string Relationship { get; set; }
+        public string CardId { get; set; }
         public string Designation { get; set; }
         public string Department { get; set; }
         public string ProjectLocation { get; set; }
@@ -119,6 +121,8 @@ namespace RFID_Marketing_Form.Data
         public string IssuedBy { get; set; }
         public string PrintDate { get; set; }
         public string CreatedDate { get; set; }
+        public string StatusRemarks { get; set; }
+        public string IsApproved { get; set; }
     }
 
     public class RfidRecordsResult

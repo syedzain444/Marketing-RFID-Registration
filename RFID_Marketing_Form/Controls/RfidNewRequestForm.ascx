@@ -106,7 +106,7 @@
                     <div class="detail-cell detail-cell--field field" data-field="familyRelationship">
                         <label class="detail-field-label" for="txtFamilyRelationship">Relationship <span class="req">*</span></label>
                         <select id="txtFamilyRelationship" class="nr-field-input nr-field-select">
-                            <option value="">Select…</option>
+                            <option value="">Select...</option>
                             <option value="SPOUSE">Spouse</option>
                             <option value="SON">Son</option>
                             <option value="DAUGHTER">Daughter</option>
@@ -133,7 +133,7 @@
     <div class="nr-shared-strip">
         <div class="new-request-status-bar field" data-field="status">
             <span class="new-request-status-bar__label">Status</span>
-            <div id="rblStatus" class="pills pills-segment pills-segment--on-white pills-compact">
+            <div id="rblStatus" class="pills pills-segment pills-segment--on-white pills-compact pills--choice">
                 <label class="pill"><input type="radio" name="rblStatus" value="Active" checked="checked" /> Active</label>
                 <label class="pill"><input type="radio" name="rblStatus" value="Inactive" /> Inactive</label>
             </div>
@@ -145,16 +145,11 @@
             </div>
             <div class="detail-cell detail-cell--field field" data-field="expiry">
                 <label class="detail-field-label" for="txtExpiryDate">Expiry date</label>
-                <input type="date" id="txtExpiryDate" class="nr-field-input nr-field-input--date" />
-                <div class="chips-row chips-row--compact">
-                    <button type="button" class="chip-btn" data-months="6">6m</button>
-                    <button type="button" class="chip-btn" data-months="12">1y</button>
-                    <button type="button" class="chip-btn" data-months="24">2y</button>
-                </div>
+                <input type="date" id="txtExpiryDate" class="nr-field-input nr-field-input--date nr-field-input--readonly" readonly="readonly" tabindex="-1" aria-readonly="true" />
             </div>
             <div class="detail-cell detail-cell--field field" data-field="forward">
                 <span class="detail-field-label">Forward HOD</span>
-                <div id="rblForward" class="pills pills-segment pills-compact pills-segment--on-white">
+                <div id="rblForward" class="pills pills-segment pills-compact pills-segment--on-white pills--choice">
                     <label class="pill"><input type="radio" name="rblForward" value="N" checked="checked" /> No</label>
                     <label class="pill"><input type="radio" name="rblForward" value="Y" /> Yes</label>
                 </div>
@@ -169,10 +164,9 @@
             </div>
             <div class="detail-cell detail-cell--field field" data-field="approved">
                 <span class="detail-field-label">Approved</span>
-                <div id="rblApproved" class="pills pills-segment pills-compact pills-segment--on-white">
-                    <label class="pill"><input type="radio" name="rblApproved" value="" checked="checked" /> —</label>
+                <div id="rblApproved" class="pills pills-segment pills-compact pills-segment--on-white pills--choice">
                     <label class="pill"><input type="radio" name="rblApproved" value="Y" /> Yes</label>
-                    <label class="pill"><input type="radio" name="rblApproved" value="N" /> No</label>
+                    <label class="pill"><input type="radio" name="rblApproved" value="N" checked="checked" /> No</label>
                 </div>
             </div>
             <div class="detail-cell detail-cell--field field" data-field="approvedDate">

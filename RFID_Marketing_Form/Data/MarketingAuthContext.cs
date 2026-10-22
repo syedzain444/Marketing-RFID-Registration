@@ -239,7 +239,7 @@ namespace RFID_Marketing_Form.Data
 
             if (HasPermission(context, AppPermissionCodes.ScreenForm))
             {
-                return VirtualPathUtility.ToAbsolute("~/Default.aspx");
+                return VirtualPathUtility.ToAbsolute("~/Records.aspx");
             }
 
             if (HasPermission(context, AppPermissionCodes.ScreenAdmin))
