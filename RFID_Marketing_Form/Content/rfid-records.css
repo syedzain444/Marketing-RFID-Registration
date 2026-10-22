@@ -777,6 +777,10 @@ table.records-table tbody tr:last-child td {
     display: none !important;
 }
 
+.print-card-form-panel.is-hidden {
+    display: none !important;
+}
+
 .print-family-picker {
     margin-bottom: 10px;
 }

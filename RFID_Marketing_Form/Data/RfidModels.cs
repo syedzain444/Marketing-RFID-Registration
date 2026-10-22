@@ -116,6 +116,9 @@ namespace RFID_Marketing_Form.Data
         public string ExpiryDate { get; set; }
         public string PhotoPath { get; set; }
         public string Status { get; set; }
+        public string IssuedBy { get; set; }
+        public string PrintDate { get; set; }
+        public string CreatedDate { get; set; }
     }
 
     public class RfidRecordsResult

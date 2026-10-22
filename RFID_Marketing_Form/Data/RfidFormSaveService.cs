@@ -143,7 +143,7 @@ namespace RFID_Marketing_Form.Data
                 CardName = GetFormValue(context, "txtFamilyCardName"),
                 Relationship = GetFormValue(context, "txtFamilyRelationship"),
                 Cnic = GetFormValue(context, "txtFamilyCnic"),
-                RfidNumber = GetFormValue(context, "txtFamilyRfidNumber"),
+                RfidNumber = string.Empty,
                 Status = GetFormValue(context, "rblStatus"),
                 IssueDateText = GetFormValue(context, "txtIssueDate"),
                 ExpiryDateText = GetFormValue(context, "txtExpiryDate"),

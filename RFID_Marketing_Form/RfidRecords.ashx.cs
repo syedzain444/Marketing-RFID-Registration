@@ -99,6 +99,23 @@ namespace RFID_Marketing_Form
                         context.Request["rfidNumber"]);
                 }
             }
+            else if (action == "updatefamilyprintassignment")
+            {
+                var idText = (context.Request["familyId"] ?? context.Request["id"] ?? string.Empty).Trim();
+                decimal id;
+                if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0)
+                {
+                    result = RfidRecordsResult.Fail("A valid family card ID is required.");
+                }
+                else
+                {
+                    result = repo.UpdateFamilyPrintAssignment(
+                        id,
+                        context.Request["issuedBy"],
+                        context.Request["printDate"],
+                        context.Request["rfidNumber"]);
+                }
+            }
             else if (action == "lookupemp")
             {
                 var empId = (context.Request.QueryString["empId"] ?? context.Request.Form["empId"] ?? string.Empty).Trim();
@@ -172,6 +189,7 @@ namespace RFID_Marketing_Form
 
                     return true;
                 case "updateprintassignment":
+                case "updatefamilyprintassignment":
                     if (!MarketingAuthContext.TryRequireAnyPermission(
                         context,
                         new[]

@@ -532,7 +532,7 @@ var RfidForm = (function () {
             if (!isFamilyOnlyMode()) famChk.disabled = false;
         }
         activeFormTab = isFamilyOnlyMode() ? "family" : "employee";
-        ["txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyRfidNumber", "txtFamilyCardIdPreview", "txtFamilyPhotoPath"].forEach(function (id) {
+        ["txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyCardIdPreview", "txtFamilyPhotoPath"].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.value = "";
         });
@@ -635,7 +635,6 @@ var RfidForm = (function () {
             var statusCls = status.toLowerCase() === "active" ? "badge badge--active" : "badge badge--muted";
             var apprText = approved === "Y" ? "Yes" : approved === "N" ? "No" : "Not set";
             var apprCls = approved === "Y" ? "badge badge--yes" : "badge badge--muted";
-            var rfid = previewTab === "family" ? val("txtFamilyRfidNumber") : "—";
             var cardId = val("txtFamilyCardIdPreview");
             var tabBadge = isFamilyMode()
                 ? '<span class="badge badge--muted">' + (previewTab === "family" ? "Family tab" : "Employee tab") + "</span>"
@@ -647,7 +646,7 @@ var RfidForm = (function () {
                 (previewTab === "family" && cardId
                     ? '<span class="badge badge--muted">Card <span class="rfid-mono">' + escapeHtml(cardId) + "</span></span>"
                     : "") +
-                '<span class="badge badge--muted">RFID <span class="rfid-mono">' + escapeHtml(rfid || "—") + "</span></span>";
+                '<span class="badge badge--muted">RFID at print</span>';
         }
     }
 
@@ -919,7 +918,7 @@ var RfidForm = (function () {
         fd.append("txtFamilyCardName", val("txtFamilyCardName"));
         fd.append("txtFamilyRelationship", val("txtFamilyRelationship"));
         fd.append("txtFamilyCnic", val("txtFamilyCnic"));
-        fd.append("txtFamilyRfidNumber", val("txtFamilyRfidNumber"));
+        fd.append("txtFamilyRfidNumber", "");
         fd.append("txtFamilyPhotoPath", val("txtFamilyPhotoPath"));
         var form = document.getElementById("form1");
         var keyEl = form ? form.querySelector('input[type="hidden"][name="captchaKey"]') : null;
@@ -1051,7 +1050,7 @@ var RfidForm = (function () {
     }
 
     function bind() {
-        var watch = ["txtEmpId", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject", "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtGrade", "txtIssueDate", "txtExpiryDate", "txtRequesterRemarks", "txtHodRemarks", "txtForwardBy", "txtForwardOn", "txtApprovedDate", "txtApproveId", "txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic", "txtFamilyRfidNumber"];
+        var watch = ["txtEmpId", "txtPhotoPath", "txtCardName", "txtDesignation", "txtDepartment", "txtProject", "txtJoiningDate", "txtBloodGroup", "txtCnic", "txtEmergencyNo", "txtGrade", "txtIssueDate", "txtExpiryDate", "txtRequesterRemarks", "txtHodRemarks", "txtForwardBy", "txtForwardOn", "txtApprovedDate", "txtApproveId", "txtFamilyCardName", "txtFamilyRelationship", "txtFamilyCnic"];
         for (var i = 0; i < watch.length; i++) {
             var el = document.getElementById(watch[i]);
             if (!el) continue;

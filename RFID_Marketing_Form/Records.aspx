@@ -13,10 +13,10 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
     <link href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" rel="stylesheet" />
     <link href="Content/rfid.css" rel="stylesheet" />
-    <link href="Site.css" rel="stylesheet" />
+    <link href="Site.css?v=2" rel="stylesheet" />
     <link href="Content/marketing-sidebar.css?v=4" rel="stylesheet" />
     <link href="Content/marketing-wide.css?v=1" rel="stylesheet" />
-    <link href="Content/rfid-records.css?v=3" rel="stylesheet" />
+    <link href="Content/rfid-records.css?v=4" rel="stylesheet" />
     <link href="Content/marketing-dashboard.css?v=2" rel="stylesheet" />
 </head>
 <body class="records-page marketing-app dashboard-v2">
@@ -310,8 +310,8 @@
         <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
         <script src="Scripts/rfid-photos.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="Scripts/rfid-form.js?v=10"></script>
-        <script src="Scripts/rfid-records.js?v=16"></script>
+        <script src="Scripts/rfid-form.js?v=11"></script>
+        <script src="Scripts/rfid-records.js?v=17"></script>
     </form>
 </body>
 </html>

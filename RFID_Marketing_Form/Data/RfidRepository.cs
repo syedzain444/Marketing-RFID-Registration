@@ -574,6 +574,156 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
+        public RfidRecordsResult UpdateFamilyPrintAssignment(decimal familyId, string issuedBy, string printDateText, string rfidNumber)
+        {
+            if (familyId <= 0)
+            {
+                return RfidRecordsResult.Fail("A valid family card ID is required.");
+            }
+
+            rfidNumber = TrimMax(rfidNumber, 50);
+            if (!string.IsNullOrEmpty(rfidNumber) &&
+                (rfidNumber.Length < 4 || !RfidValidator.IsRfid(rfidNumber)))
+            {
+                return RfidRecordsResult.Fail("RFID number must be 4 to 50 characters: letters, numbers, spaces, hyphens, or colons.");
+            }
+
+            issuedBy = TrimMax(issuedBy, 50);
+            if (!string.IsNullOrEmpty(issuedBy) && !RfidValidator.IsPersonName(issuedBy))
+            {
+                return RfidRecordsResult.Fail("Issued by must be 1 to 50 characters: letters, numbers, spaces, and . ' -");
+            }
+
+            DateTime? printDate = null;
+            if (!string.IsNullOrWhiteSpace(printDateText))
+            {
+                printDate = TryParseOptionalDate(printDateText);
+                if (!printDate.HasValue)
+                {
+                    return RfidRecordsResult.Fail("Print date is not a valid date.");
+                }
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing))
+            {
+                return RfidRecordsResult.Fail(missing);
+            }
+
+            if (IsBlocked(cs))
+            {
+                return RfidRecordsResult.Fail(blockedMessage);
+            }
+
+            var familyTable = ResolveFamilyTableQualified();
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+
+                    string empId = null;
+                    string issueDateDisplay = null;
+                    using (var loadCmd = Command(conn, null,
+                        "SELECT EMP_ID, ISSUE_DATE FROM " + familyTable + " WHERE ID = :id AND ROWNUM = 1"))
+                    {
+                        AddNumber(loadCmd, "id", familyId);
+                        using (var reader = loadCmd.ExecuteReader())
+                        {
+                            if (!reader.Read())
+                            {
+                                return RfidRecordsResult.Fail("Family card not found.");
+                            }
+
+                            empId = ReadString(reader, "EMP_ID");
+                            issueDateDisplay = ReadDateDisplay(reader, "ISSUE_DATE");
+                        }
+                    }
+
+                    if (printDate.HasValue && !string.IsNullOrWhiteSpace(issueDateDisplay))
+                    {
+                        DateTime issueDate;
+                        if (DateTime.TryParse(issueDateDisplay, CultureInfo.InvariantCulture, DateTimeStyles.None, out issueDate) ||
+                            DateTime.TryParse(issueDateDisplay, CultureInfo.GetCultureInfo("en-GB"), DateTimeStyles.None, out issueDate))
+                        {
+                            if (printDate.Value.Date < issueDate.Date)
+                            {
+                                return RfidRecordsResult.Fail("Print date cannot be before the issue date.");
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(rfidNumber))
+                    {
+                        var empTable = ResolveTable(cs);
+                        using (var dupFam = Command(conn, null,
+                            "SELECT 1 FROM " + familyTable +
+                            " WHERE UPPER(TRIM(RFID_NUMBER)) = UPPER(TRIM(:rfid)) AND ID <> :id AND ROWNUM = 1"))
+                        {
+                            AddVarchar(dupFam, "rfid", rfidNumber, 50);
+                            AddNumber(dupFam, "id", familyId);
+                            if (dupFam.ExecuteScalar() != null)
+                            {
+                                return RfidRecordsResult.Fail("This RFID number is already assigned to a family card.");
+                            }
+                        }
+
+                        using (var dupEmp = Command(conn, null,
+                            "SELECT 1 FROM " + empTable.Qualified +
+                            " WHERE UPPER(TRIM(RFID_NUMBER)) = UPPER(TRIM(:rfid)) AND ROWNUM = 1"))
+                        {
+                            AddVarchar(dupEmp, "rfid", rfidNumber, 50);
+                            if (dupEmp.ExecuteScalar() != null)
+                            {
+                                return RfidRecordsResult.Fail("This RFID number is already on file. Use a different card number.");
+                            }
+                        }
+                    }
+
+                    const string sql = "UPDATE {0} SET ISSUED_BY = :issued_by, PRINT_DATE = :print_date, RFID_NUMBER = :rfid_number WHERE ID = :id";
+                    using (var cmd = Command(conn, null, string.Format(CultureInfo.InvariantCulture, sql, familyTable)))
+                    {
+                        AddVarchar(cmd, "issued_by", NullIfEmpty(issuedBy), 50);
+                        AddDate(cmd, "print_date", printDate);
+                        AddVarchar(cmd, "rfid_number", NullIfEmpty(rfidNumber), 50);
+                        AddNumber(cmd, "id", familyId);
+                        int rows = cmd.ExecuteNonQuery();
+                        if (!IsSuccessfulUpdate(rows))
+                        {
+                            return RfidRecordsResult.Fail("Family card not found or assignment was not updated.");
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(empId))
+                    {
+                        return RfidRecordsResult.Fail("Family card has no employee ID.");
+                    }
+
+                    using (var empCmd = Command(conn, null,
+                        "SELECT ID FROM " + ResolveTable(cs).Qualified +
+                        " WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) AND ROWNUM = 1"))
+                    {
+                        AddVarchar(empCmd, "emp", empId.Trim(), 20);
+                        var empRowId = empCmd.ExecuteScalar();
+                        if (empRowId == null || empRowId == DBNull.Value)
+                        {
+                            return RfidRecordsResult.Fail("Employee record not found for this family card.");
+                        }
+
+                        return GetRecord(ReadDecimal(empRowId));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var described = RfidErrors.Describe(ex);
+                NoteAuthFailure(cs, ex, described);
+                return RfidRecordsResult.Fail(described);
+            }
+        }
+
         private static bool IsSuccessfulUpdate(int rowsAffected)
         {
             // Oracle ODP.NET often returns -1 when row count is unknown but the statement succeeded.
@@ -881,7 +1031,7 @@ namespace RFID_Marketing_Form.Data
             var familyTable = ResolveFamilyTableQualified();
             const string sqlTemplate =
                 "SELECT ID, EMP_ID, DEPENDENT_ID, CARD_ID, CARD_NAME, RELATIONSHIP, CNIC, RFID_NUMBER, " +
-                "ISSUE_DATE, EXPIRY_DATE, IMAGE_PATH, STATUS FROM {0} " +
+                "ISSUE_DATE, EXPIRY_DATE, IMAGE_PATH, STATUS, ISSUED_BY, PRINT_DATE, CREATED_DATE FROM {0} " +
                 "WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) ORDER BY DEPENDENT_ID";
 
             try
@@ -906,7 +1056,10 @@ namespace RFID_Marketing_Form.Data
                                 IssueDate = ReadDateDisplay(reader, "ISSUE_DATE"),
                                 ExpiryDate = ReadDateDisplay(reader, "EXPIRY_DATE"),
                                 PhotoPath = ReadString(reader, "IMAGE_PATH"),
-                                Status = ReadString(reader, "STATUS")
+                                Status = ReadString(reader, "STATUS"),
+                                IssuedBy = ReadString(reader, "ISSUED_BY"),
+                                PrintDate = ReadDateDisplay(reader, "PRINT_DATE"),
+                                CreatedDate = ReadDateDisplay(reader, "CREATED_DATE")
                             });
                         }
                     }

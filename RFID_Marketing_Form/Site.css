@@ -496,6 +496,15 @@
     display: none !important;
 }
 
+/* Preview toggles whole pages; back must not stay display:none inside visible back page */
+.family-card-container.preview-scaled .card-print-page--family-back .family-id-card-back {
+    display: block;
+}
+
+.family-card-container.preview-scaled .card-print-page--family-front .family-id-card-front {
+    display: flex;
+}
+
 .family-id-card-aspect {
     width: 540px;
     height: 340px;

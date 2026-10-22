@@ -814,34 +814,112 @@
         );
     }
 
-    function printAssignmentFieldsHtml(record) {
-        var printIso = displayDateToIso(record.PrintDate);
-        var createdDisplay = record.CreatedDate && String(record.CreatedDate).trim() ? record.CreatedDate : "—";
+    function printAssignmentFieldsHtml(opts) {
+        opts = opts || {};
+        var isFamily = opts.mode === "family";
+        var src = opts.source || {};
+        var printIso = displayDateToIso(src.PrintDate);
+        var createdDisplay = src.CreatedDate && String(src.CreatedDate).trim() ? src.CreatedDate : "—";
+        var recordId = src.Id != null ? String(src.Id) : "";
+        var rfidId = isFamily ? "printFamilyRfidNumber" : "printCardRfidNumber";
+        var printId = isFamily ? "printFamilyPrintDate" : "printCardPrintDate";
+        var issuedId = isFamily ? "printFamilyIssuedBy" : "printCardIssuedBy";
+        var createdId = isFamily ? "printFamilyCreatedDisplay" : "printCardCreatedDisplay";
+        var hiddenId = isFamily ? "printFamilyRecordId" : "printCardRecordId";
+        var errId = isFamily ? "printFamilyAssignError" : "printAssignError";
         return (
             '<div class="print-assign-fields">' +
-            '<input type="hidden" id="printCardRecordId" value="' + esc(record.Id != null ? String(record.Id) : "") + '" />' +
+            '<input type="hidden" id="' + hiddenId + '" value="' + esc(recordId) + '" />' +
             '<div class="edit-field edit-field--full">' +
-            '<label for="printCardRfidNumber">RFID number</label>' +
-            '<input type="text" id="printCardRfidNumber" class="edit-input rfid-mono" maxlength="50" placeholder="e.g. 123456" value="' + esc(record.RfidNumber || "") + '" />' +
-            '<p class="print-assign-hint">Assign the physical card tag before printing.</p>' +
+            '<label for="' + rfidId + '">RFID number <span class="req">*</span></label>' +
+            '<input type="text" id="' + rfidId + '" class="edit-input rfid-mono" maxlength="50" placeholder="e.g. 123456" value="' + esc(src.RfidNumber || "") + '" />' +
+            '<p class="print-assign-hint">Required before printing. Assign the physical card tag here.</p>' +
             "</div>" +
             '<div class="edit-field">' +
-            '<label for="printCardPrintDate">Print date</label>' +
-            '<input type="date" id="printCardPrintDate" class="edit-input" value="' + esc(printIso) + '" />' +
+            '<label for="' + printId + '">Print date <span class="req">*</span></label>' +
+            '<input type="date" id="' + printId + '" class="edit-input" value="' + esc(printIso) + '" />' +
             "</div>" +
             '<div class="edit-field">' +
-            '<label for="printCardIssuedBy">Issued by</label>' +
-            '<input type="text" id="printCardIssuedBy" class="edit-input" maxlength="50" placeholder="Name" value="' + esc(record.IssuedBy || "") + '" />' +
+            '<label for="' + issuedId + '">Issued by <span class="req">*</span></label>' +
+            '<input type="text" id="' + issuedId + '" class="edit-input" maxlength="50" placeholder="Name" value="' + esc(src.IssuedBy || "") + '" />' +
             "</div>" +
             '<div class="edit-field edit-field--full">' +
             "<label>Created date</label>" +
-            '<div class="print-assign-readonly" id="printCardCreatedDisplay" title="Set automatically when the record is saved from the RFID form">' +
+            '<div class="print-assign-readonly" id="' + createdId + '" title="Set when the record was saved">' +
             esc(createdDisplay) +
             "</div>" +
             '<p class="print-assign-hint">System date when the record was created (not editable).</p>' +
             "</div>" +
-            '<p id="printAssignError" class="edit-form-error is-hidden" role="alert"></p>' +
+            '<p id="' + errId + '" class="edit-form-error is-hidden" role="alert"></p>' +
             "</div>"
+        );
+    }
+
+    function renderEmployeePrintDetails(record) {
+        return (
+            '<div class="ro-form ro-form--wide">' +
+            roField("Record ID", record.Id) +
+            roField("Employee ID", record.EmpId) +
+            roField("Name", record.EmployeeName) +
+            roField("Designation", record.Designation) +
+            roField("Department", record.Department) +
+            roField("Project / Location", record.ProjectLocation) +
+            roField("Joining date", record.JoiningDate) +
+            roField("Blood group", record.BloodGroup) +
+            roField("CNIC", record.Cnic) +
+            roField("Emergency #", record.EmergencyNo) +
+            roField("Status", record.Status) +
+            roField("Status remarks", record.StatusRemarks) +
+            roField("Issue date", record.IssueDate) +
+            roField("Expiry date", record.ExpiryDate) +
+            roField("Approved", record.IsApproved) +
+            roField("Approved date", record.ApprovedDate) +
+            roField("Approver ID", record.ApproveId) +
+            roField("Forward to HOD", record.IsForwardHod) +
+            roField("Forwarded by", record.ForwardBy) +
+            roField("Forwarded on", record.ForwardOn) +
+            roField("HOD remarks", record.HodRemarks, { half: true }) +
+            roField("Requester remarks", record.RequesterRemarks, { half: true }) +
+            "</div>"
+        );
+    }
+
+    function renderFamilyPrintDetails(family) {
+        return (
+            '<div class="ro-form ro-form--wide">' +
+            roField("Family record ID", family.Id) +
+            roField("Employee ID", family.EmpId) +
+            roField("Dependent #", family.DependentId) +
+            roField("Card ID", family.CardId) +
+            roField("Card holder name", family.CardName) +
+            roField("Relationship", formatRelationshipLabel(family.Relationship)) +
+            roField("CNIC", family.Cnic) +
+            roField("Status", family.Status) +
+            roField("Issue date", family.IssueDate) +
+            roField("Expiry date", family.ExpiryDate) +
+            roField("Photo path", family.PhotoPath, { full: true }) +
+            "</div>"
+        );
+    }
+
+    function renderFamilyPrintFormPanel(family) {
+        if (!family) {
+            return '<p class="print-assign-hint">Select a family member to view details.</p>';
+        }
+        return (
+            '<p class="print-card-layout__form-title">Print &amp; assignment</p>' +
+            printAssignmentFieldsHtml({ mode: "family", source: family }) +
+            '<p class="print-card-layout__form-title print-card-layout__form-title--sub">Family card details</p>' +
+            renderFamilyPrintDetails(family)
+        );
+    }
+
+    function renderEmployeePrintFormPanel(record) {
+        return (
+            '<p class="print-card-layout__form-title">Print &amp; assignment</p>' +
+            printAssignmentFieldsHtml({ mode: "employee", source: record }) +
+            '<p class="print-card-layout__form-title print-card-layout__form-title--sub">Employee details</p>' +
+            renderEmployeePrintDetails(record)
         );
     }
 
@@ -912,34 +990,41 @@
                   "</section>")
                 : "") +
             '<section class="print-card-layout__form">' +
-            '<p class="print-card-layout__form-title">Print &amp; assignment</p>' +
-            printAssignmentFieldsHtml(record) +
-            '<p class="print-card-layout__form-title print-card-layout__form-title--sub">Other details</p>' +
-            '<div class="ro-form ro-form--wide">' +
-            roField("Record ID", record.Id) +
-            roField("Employee ID", record.EmpId) +
-            roField("Name", record.EmployeeName) +
-            roField("Designation", record.Designation) +
-            roField("Department", record.Department) +
-            roField("Project / Location", record.ProjectLocation) +
-            roField("Joining date", record.JoiningDate) +
-            roField("Blood group", record.BloodGroup) +
-            roField("CNIC", record.Cnic) +
-            roField("Emergency #", record.EmergencyNo) +
-            roField("Status", record.Status) +
-            roField("Status remarks", record.StatusRemarks) +
-            roField("Issue date", record.IssueDate) +
-            roField("Expiry date", record.ExpiryDate) +
-            roField("Approved", record.IsApproved) +
-            roField("Approved date", record.ApprovedDate) +
-            roField("Approver ID", record.ApproveId) +
-            roField("Forward to HOD", record.IsForwardHod) +
-            roField("Forwarded by", record.ForwardBy) +
-            roField("Forwarded on", record.ForwardOn) +
-            roField("HOD remarks", record.HodRemarks, { half: true }) +
-            roField("Requester remarks", record.RequesterRemarks, { half: true }) +
-            "</div></section></div></article>"
+            '<div class="print-card-form-panel" id="printFormPanelEmployee" data-print-form="employee">' +
+            renderEmployeePrintFormPanel(record) +
+            "</div>" +
+            (hasFamily
+                ? ('<div class="print-card-form-panel is-hidden" id="printFormPanelFamily" data-print-form="family">' +
+                  renderFamilyPrintFormPanel(familyCards[0]) +
+                  "</div>")
+                : "") +
+            "</section></div></article>"
         );
+    }
+
+    var printModalFamilyCards = [];
+
+    function getSelectedFamilyCardIndex() {
+        var picker = document.getElementById("printFamilyMemberPicker");
+        if (!picker) return 0;
+        var idx = parseInt(picker.value, 10);
+        return isNaN(idx) ? 0 : idx;
+    }
+
+    function syncPrintFormPanels() {
+        var tab = activePrintTab();
+        var empForm = document.getElementById("printFormPanelEmployee");
+        var famForm = document.getElementById("printFormPanelFamily");
+        if (empForm) empForm.classList.toggle("is-hidden", tab === "family" && !!famForm);
+        if (famForm) famForm.classList.toggle("is-hidden", tab !== "family");
+    }
+
+    function refreshFamilyPrintFormPanel() {
+        var host = document.getElementById("printFormPanelFamily");
+        if (!host || !printModalFamilyCards.length) return;
+        var idx = getSelectedFamilyCardIndex();
+        var family = printModalFamilyCards[idx];
+        host.innerHTML = renderFamilyPrintFormPanel(family);
     }
 
     function setFamilyPreviewSide(side) {
@@ -958,6 +1043,7 @@
 
     function bindPrintCardUi(record, familyCards) {
         familyCards = familyCards || [];
+        printModalFamilyCards = familyCards;
         document.querySelectorAll(".print-card-tab").forEach(function (btn) {
             btn.addEventListener("click", function () {
                 var tab = btn.getAttribute("data-print-tab");
@@ -970,6 +1056,7 @@
                 var famPanel = document.getElementById("printCardTabFamily");
                 if (empPanel) empPanel.classList.toggle("is-hidden", tab !== "employee");
                 if (famPanel) famPanel.classList.toggle("is-hidden", tab !== "family");
+                syncPrintFormPanels();
                 syncPrintCardButton();
             });
         });
@@ -982,6 +1069,8 @@
                 var host = document.getElementById("printFamilyPreviewHost");
                 if (host) host.innerHTML = renderFamilyIdCardBlock(familyCards[idx]);
                 setFamilyPreviewSide("front");
+                refreshFamilyPrintFormPanel();
+                syncPrintCardButton();
             });
         }
 
@@ -994,6 +1083,7 @@
         if (familyCards.length) {
             setFamilyPreviewSide("front");
         }
+        syncPrintFormPanels();
     }
 
     function openPrintModal() {
@@ -1014,7 +1104,9 @@
     }
 
     function showPrintAssignError(msg) {
-        var el = document.getElementById("printAssignError");
+        var isFam = activePrintTab() === "family";
+        var el = document.getElementById(isFam ? "printFamilyAssignError" : "printAssignError");
+        if (!el && !isFam) el = document.getElementById("printAssignError");
         if (!el) return;
         el.textContent = msg || "";
         el.classList.toggle("is-hidden", !msg);
@@ -1034,11 +1126,11 @@
         });
     }
 
-    function printAssignmentIsComplete() {
-        var rfidEl = document.getElementById("printCardRfidNumber");
-        var printEl = document.getElementById("printCardPrintDate");
-        var issuedEl = document.getElementById("printCardIssuedBy");
-        var createdEl = document.getElementById("printCardCreatedDisplay");
+    function printAssignmentIsCompleteFor(prefix) {
+        var rfidEl = document.getElementById(prefix + "RfidNumber");
+        var printEl = document.getElementById(prefix + "PrintDate");
+        var issuedEl = document.getElementById(prefix + "IssuedBy");
+        var createdEl = document.getElementById(prefix + "CreatedDisplay");
         var rfid = rfidEl ? String(rfidEl.value || "").trim() : "";
         var printDate = printEl ? String(printEl.value || "").trim() : "";
         var issuedBy = issuedEl ? String(issuedEl.value || "").trim() : "";
@@ -1052,6 +1144,14 @@
         return true;
     }
 
+    function printAssignmentIsComplete() {
+        return printAssignmentIsCompleteFor("printCard");
+    }
+
+    function printFamilyAssignmentIsComplete() {
+        return printAssignmentIsCompleteFor("printFamily");
+    }
+
     function activePrintTab() {
         var active = document.querySelector(".print-card-tab.is-active");
         return active ? active.getAttribute("data-print-tab") : "employee";
@@ -1061,11 +1161,15 @@
         var btn = document.getElementById("btnPrintCardPreview");
         if (!btn) return;
         if (activePrintTab() === "family") {
-            var famOk = !!document.getElementById("printCardPreviewAreaFamily");
+            var famOk = printFamilyAssignmentIsComplete() && !!document.getElementById("printCardPreviewAreaFamily");
             btn.disabled = !famOk;
             btn.classList.toggle("is-disabled", !famOk);
             btn.setAttribute("aria-disabled", famOk ? "false" : "true");
-            btn.removeAttribute("title");
+            if (!famOk) {
+                btn.setAttribute("title", "Fill RFID number, print date, and issued by for this family card.");
+            } else {
+                btn.removeAttribute("title");
+            }
             return;
         }
         var ok = printAssignmentIsComplete();
@@ -1080,7 +1184,8 @@
     }
 
     function savePrintAssignment() {
-        var idEl = document.getElementById("printCardRecordId");
+        var isFamily = activePrintTab() === "family";
+        var idEl = document.getElementById(isFamily ? "printFamilyRecordId" : "printCardRecordId");
         var id = idEl ? idEl.value : "";
         if (!id) {
             showPrintAssignError("Record is still loading.");
@@ -1094,12 +1199,25 @@
             btn.textContent = "Saving…";
         }
         var body = new URLSearchParams();
-        body.append("id", id);
-        body.append("issuedBy", (document.getElementById("printCardIssuedBy") || {}).value || "");
-        body.append("printDate", (document.getElementById("printCardPrintDate") || {}).value || "");
-        body.append("rfidNumber", (document.getElementById("printCardRfidNumber") || {}).value || "");
+        if (isFamily) {
+            body.append("familyId", id);
+        } else {
+            body.append("id", id);
+        }
+        body.append(
+            "issuedBy",
+            ((document.getElementById(isFamily ? "printFamilyIssuedBy" : "printCardIssuedBy") || {}).value) || ""
+        );
+        body.append(
+            "printDate",
+            ((document.getElementById(isFamily ? "printFamilyPrintDate" : "printCardPrintDate") || {}).value) || ""
+        );
+        body.append(
+            "rfidNumber",
+            ((document.getElementById(isFamily ? "printFamilyRfidNumber" : "printCardRfidNumber") || {}).value) || ""
+        );
 
-        fetchJson(recordsApiUrl("action=updateprintassignment"), {
+        fetchJson(recordsApiUrl(isFamily ? "action=updatefamilyprintassignment" : "action=updateprintassignment"), {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: body.toString()
@@ -1119,7 +1237,9 @@
                 return recordsSweetAlert(
                     "success",
                     "Assignment saved",
-                    "Print and assignment details were saved for record #" + id + "."
+                    isFamily
+                        ? "Print and assignment details were saved for family card #" + id + "."
+                        : "Print and assignment details were saved for record #" + id + "."
                 );
             })
             .catch(function (err) {
@@ -1398,6 +1518,14 @@
     }
 
     function printFamilyCardPreviewOnly() {
+        if (!printFamilyAssignmentIsComplete()) {
+            recordsSweetAlert(
+                "warning",
+                "Complete print & assignment",
+                "Fill RFID number, print date, and issued by for this family card before printing."
+            );
+            return;
+        }
         var area = document.getElementById("printCardPreviewAreaFamily");
         if (!area) return;
         var front = area.querySelector(".family-id-card-front-side");
@@ -1641,7 +1769,11 @@
         document.getElementById("printCardCloseFoot").addEventListener("click", closePrintModal);
         document.getElementById("printCardBackdrop").addEventListener("click", closePrintModal);
         document.getElementById("btnPrintCardPreview").addEventListener("click", printCardPreviewOnly);
-        $("#printCardModal").on("input change", "#printCardRfidNumber, #printCardPrintDate, #printCardIssuedBy", syncPrintCardButton);
+        $("#printCardModal").on(
+            "input change",
+            "#printCardRfidNumber, #printCardPrintDate, #printCardIssuedBy, #printFamilyRfidNumber, #printFamilyPrintDate, #printFamilyIssuedBy",
+            syncPrintCardButton
+        );
         var btnSavePrint = document.getElementById("btnSavePrintAssignment");
         if (btnSavePrint) {
             if (!can("print") && !can("edit")) {

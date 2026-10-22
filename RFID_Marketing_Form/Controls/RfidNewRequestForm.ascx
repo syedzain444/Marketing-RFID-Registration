@@ -125,10 +125,6 @@
                         <label class="detail-field-label" for="txtFamilyCardIdPreview">Card ID</label>
                         <input type="text" id="txtFamilyCardIdPreview" class="nr-field-input nr-field-input--readonly" readonly="readonly" placeholder="On save" tabindex="-1" />
                     </div>
-                    <div class="detail-cell detail-cell--field field" data-field="familyRfid">
-                        <label class="detail-field-label" for="txtFamilyRfidNumber">RFID number</label>
-                        <input type="text" id="txtFamilyRfidNumber" maxlength="50" class="nr-field-input" placeholder="Optional" />
-                    </div>
                 </div>
             </section>
         </div>
