@@ -1757,6 +1757,10 @@ table.records-table tbody tr:last-child td {
     width: 200%;
 }
 
+.new-request-form:not(.is-family-mode) .nr-panel--family .req {
+    display: none;
+}
+
 .new-request-form.is-family-mode .nr-panels-track.is-tab-family {
     transform: translateX(-50%);
 }

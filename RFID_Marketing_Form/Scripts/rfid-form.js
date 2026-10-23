@@ -485,12 +485,15 @@ var RfidForm = (function () {
         } else {
             activeFormTab = "employee";
             setFormTab("employee", false);
+            clearFamilyFieldErrors();
+            submitted = false;
             var root = document.querySelector(".new-request-form");
             if (root) {
                 root.classList.remove("is-tab-family");
                 root.classList.add("is-tab-employee");
             }
         }
+        refreshMeter();
     }
 
     function onFamilyToggleChange() {
@@ -517,11 +520,8 @@ var RfidForm = (function () {
         preview.placeholder = emp ? "" : "Enter employee ID first";
     }
 
-    function localIssues() {
+    function localEmployeeCoreIssues() {
         var issues = [];
-        if (isFamilyMode()) {
-            return localFamilyIssues();
-        }
         var emp = val("txtEmpId");
         var status = radioValue("rblStatus");
         var forward = radioValue("rblForward");
@@ -538,7 +538,9 @@ var RfidForm = (function () {
         var forwardOn = parseIso(val("txtForwardOn"));
 
         if (!emp) issues.push(issue("emp", "Employee ID is required."));
-        else if (emp.length > 20 || !/^[A-Za-z0-9][A-Za-z0-9\-\/_.]*$/.test(emp)) issues.push(issue("emp", "Employee ID must be 1 to 20 characters: letters, numbers, hyphen, slash, underscore, or dot."));
+        else if (emp.length > 20 || !/^[A-Za-z0-9][A-Za-z0-9\-\/_.]*$/.test(emp)) {
+            issues.push(issue("emp", "Employee ID must be 1 to 20 characters: letters, numbers, hyphen, slash, underscore, or dot."));
+        }
 
         if (!status) issues.push(issue("status", "Status is required."));
         else if (status !== "Active" && status !== "Inactive") issues.push(issue("status", "Status must be Active or Inactive."));
@@ -547,17 +549,23 @@ var RfidForm = (function () {
         else {
             var maxIssue = new Date(today.getFullYear(), today.getMonth(), today.getDate());
             maxIssue.setDate(maxIssue.getDate() + 30);
-            if (issueDate < new Date(2000, 0, 1) || issueDate > maxIssue) issues.push(issue("issue", "Issue date must be between 01 Jan 2000 and 30 days from today."));
+            if (issueDate < new Date(2000, 0, 1) || issueDate > maxIssue) {
+                issues.push(issue("issue", "Issue date must be between 01 Jan 2000 and 30 days from today."));
+            }
         }
 
         if (expiry === "bad") issues.push(issue("expiry", "Expiry date is not a valid date."));
         if (approvedDate === "bad") issues.push(issue("approvedDate", "Approved date is not a valid date."));
         if (forwardOn === "bad") issues.push(issue("forwardOn", "Forwarded on is not a valid date."));
 
-        if (issueDate && expiry && expiry !== "bad" && issueDate !== "bad" && expiry <= issueDate) issues.push(issue("expiry", "Expiry date must be after the issue date."));
+        if (issueDate && expiry && expiry !== "bad" && issueDate !== "bad" && expiry <= issueDate) {
+            issues.push(issue("expiry", "Expiry date must be after the issue date."));
+        }
         if (forward === "Y") {
             if (!forwardBy) issues.push(issue("forwardBy", "Forwarded by is required when the request goes to the HOD."));
-            else if (!personOk(forwardBy, 100)) issues.push(issue("forwardBy", "Forwarded by must be 1 to 100 characters: letters, numbers, spaces, and . ' -"));
+            else if (!personOk(forwardBy, 100)) {
+                issues.push(issue("forwardBy", "Forwarded by must be 1 to 100 characters: letters, numbers, spaces, and . ' -"));
+            }
             if (isBlank(val("txtForwardOn"))) issues.push(issue("forwardOn", "Forwarded on is required when the request goes to the HOD."));
         } else {
             if (forwardBy) issues.push(issue("forwardBy", "Clear Forwarded by, or set Forward to HOD to Yes."));
@@ -579,8 +587,31 @@ var RfidForm = (function () {
         return issues;
     }
 
-    function localFamilyIssues() {
+    function localFamilyFieldIssues() {
         var issues = [];
+        var name = val("txtFamilyCardName");
+        var rel = val("txtFamilyRelationship");
+        var cnic = val("txtFamilyCnic");
+        if (!name) issues.push(issue("familyName", "Family member name is required."));
+        if (!rel) issues.push(issue("familyRelationship", "Relationship is required."));
+        if (cnic && cnic.length > 20) issues.push(issue("familyCnic", "CNIC cannot exceed 20 characters."));
+        return issues;
+    }
+
+    function clearFamilyFieldErrors() {
+        setError("familyName", "");
+        setError("familyRelationship", "");
+        setError("familyCnic", "");
+    }
+
+    function localIssues() {
+        if (isFamilyOnlyMode()) {
+            return localFamilyOnlyIssues();
+        }
+        var issues = localEmployeeCoreIssues();
+        if (!isFamilyMode()) {
+            return issues;
+        }
         if (existingEmployeeBlocksFamilyCombo()) {
             issues.push(
                 issue(
@@ -590,6 +621,11 @@ var RfidForm = (function () {
             );
             return issues;
         }
+        return issues.concat(localFamilyFieldIssues());
+    }
+
+    function localFamilyOnlyIssues() {
+        var issues = [];
         var emp = val("txtEmpId");
         var status = radioValue("rblStatus");
         var forward = radioValue("rblForward");
@@ -957,8 +993,11 @@ var RfidForm = (function () {
         if (key === "emp") return val("txtEmpId").length > 0;
         if (key === "status") return radioValue("rblStatus").length > 0;
         if (key === "issue") return val("txtIssueDate").length > 0;
-        if (key === "extra" && isFamilyMode()) {
-            return val("txtFamilyCardName").length > 0 && val("txtFamilyRelationship").length > 0;
+        if (key === "extra") {
+            if (isFamilyMode()) {
+                return val("txtFamilyCardName").length > 0 && val("txtFamilyRelationship").length > 0;
+            }
+            return true;
         }
         return false;
     }

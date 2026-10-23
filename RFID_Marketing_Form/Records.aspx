@@ -367,7 +367,7 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-        <script src="Scripts/rfid-form.js?v=16"></script>
+        <script src="Scripts/rfid-form.js?v=17"></script>
         <script src="Scripts/qrcode.min.js?v=1"></script>
         <script src="Scripts/rfid-records.js?v=36"></script>
     </form>
