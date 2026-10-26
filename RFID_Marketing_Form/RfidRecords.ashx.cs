@@ -152,6 +152,66 @@ namespace RFID_Marketing_Form
                 }));
                 return;
             }
+            else if (action == "voucher")
+            {
+                var idText = (context.Request.QueryString["id"] ?? context.Request.Form["id"] ?? string.Empty).Trim();
+                decimal id;
+                if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0)
+                {
+                    result = RfidRecordsResult.Fail("A valid record ID is required.");
+                }
+                else
+                {
+                    var voucherRepo = new CardVoucherRepository();
+                    var generatedBy = MarketingAuthContext.CurrentEmpId(context) ?? string.Empty;
+                    RfidRecord employee = null;
+                    FamilyCardRecord family = null;
+                    if (isFamilyScope)
+                    {
+                        var familyResult = repo.GetFamilyRecord(id);
+                        if (!familyResult.Ok || familyResult.FamilyCards == null || familyResult.FamilyCards.Count == 0)
+                        {
+                            result = familyResult.Ok
+                                ? RfidRecordsResult.Fail("Family record not found.")
+                                : familyResult;
+                        }
+                        else
+                        {
+                            family = familyResult.FamilyCards[0];
+                            employee = repo.TryGetEmployeeRecordByEmpId(family.EmpId);
+                            result = voucherRepo.GetOrCreateVoucher(id, "FAMILY", generatedBy, employee, family);
+                        }
+                    }
+                    else
+                    {
+                        var detail = repo.GetRecord(id);
+                        if (!detail.Ok || detail.Record == null)
+                        {
+                            result = detail;
+                        }
+                        else
+                        {
+                            employee = detail.Record;
+                            result = voucherRepo.GetOrCreateVoucher(id, "EMPLOYEE", generatedBy, employee, null);
+                        }
+                    }
+                }
+            }
+            else if (action == "vouchermarkpaid")
+            {
+                var idText = (context.Request["voucherId"] ?? context.Request.QueryString["voucherId"] ?? string.Empty).Trim();
+                decimal voucherId;
+                if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out voucherId) || voucherId <= 0)
+                {
+                    result = RfidRecordsResult.Fail("A valid voucher ID is required.");
+                }
+                else
+                {
+                    var voucherRepo = new CardVoucherRepository();
+                    var paidBy = MarketingAuthContext.CurrentEmpId(context) ?? string.Empty;
+                    result = voucherRepo.MarkVoucherPaid(voucherId, paidBy);
+                }
+            }
                 else
                 {
                     result = isFamilyScope ? repo.ListFamilyRecords() : repo.ListRecords();
@@ -234,6 +294,22 @@ namespace RFID_Marketing_Form
                         {
                             AppPermissionCodes.ScreenForm,
                             AppPermissionCodes.ActionFormSave
+                        },
+                        out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                case "voucher":
+                case "vouchermarkpaid":
+                    if (!MarketingAuthContext.TryRequireAnyPermission(
+                        context,
+                        new[]
+                        {
+                            AppPermissionCodes.ActionRecordsView,
+                            AppPermissionCodes.ActionRecordsPrint
                         },
                         out err))
                     {

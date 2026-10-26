@@ -127,3 +127,5 @@ D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\b5a9e094ece84b948be234255eadbbb9_ad2cdf34f3f1947cf50a7b1c374a985e.jpg
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\4499ec45b680429791ee79e7fb069543_images.jfif
 D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\e8789bcee0e24dba91028fec39847891_images.jfif
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Employee\f82eb6f1f3244df5a9d3f55d8624bcdc_images.jfif
+D:\Zain BTK Projects\RFID Marketing\RFID_Marketing_Form\RFID_Marketing_Form\bin\Photos\Family\fbfc2c6537c94d81a1fdf6cc365e4fbd_ad2cdf34f3f1947cf50a7b1c374a985e.jpg

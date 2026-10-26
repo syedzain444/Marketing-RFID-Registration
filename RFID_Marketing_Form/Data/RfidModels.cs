@@ -127,6 +127,28 @@ namespace RFID_Marketing_Form.Data
         public string IsApproved { get; set; }
     }
 
+    public class CardVoucherRecord
+    {
+        public decimal VoucherId { get; set; }
+        public decimal AssignmentId { get; set; }
+        public string RecordScope { get; set; }
+        public string VoucherNo { get; set; }
+        public string VoucherType { get; set; }
+        public string RefNo { get; set; }
+        public string EmployeeName { get; set; }
+        public string Cnic { get; set; }
+        public string CategoryName { get; set; }
+        public decimal Amount { get; set; }
+        public string AmountWords { get; set; }
+        public int CardCount { get; set; }
+        public string Status { get; set; }
+        public string GeneratedBy { get; set; }
+        public string GeneratedOn { get; set; }
+        public string PaidBy { get; set; }
+        public string PaidOn { get; set; }
+        public string Remarks { get; set; }
+    }
+
     public class RfidRecordsResult
     {
         public bool Ok { get; set; }
@@ -135,6 +157,7 @@ namespace RFID_Marketing_Form.Data
         public List<RfidRecord> Records { get; set; }
         public RfidRecord Record { get; set; }
         public List<FamilyCardRecord> FamilyCards { get; set; }
+        public CardVoucherRecord Voucher { get; set; }
         public string Status { get; set; }
         public string StatusRemarks { get; set; }
 

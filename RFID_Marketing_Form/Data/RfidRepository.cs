@@ -1096,6 +1096,49 @@ namespace RFID_Marketing_Form.Data
             }
         }
 
+        public RfidRecord TryGetEmployeeRecordByEmpId(string empId)
+        {
+            if (string.IsNullOrWhiteSpace(empId))
+            {
+                return null;
+            }
+
+            string cs;
+            string missing;
+            if (!TryConnectionString(out cs, out missing) || IsBlocked(cs))
+            {
+                return null;
+            }
+
+            try
+            {
+                var table = ResolveTable(cs);
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    ClearBlock();
+                    using (var cmd = Command(conn, null,
+                        "SELECT ID FROM " + table.Qualified +
+                        " WHERE UPPER(TRIM(EMP_ID)) = UPPER(TRIM(:emp)) AND ROWNUM = 1"))
+                    {
+                        AddVarchar(cmd, "emp", empId.Trim(), 20);
+                        var scalar = cmd.ExecuteScalar();
+                        if (scalar == null || scalar == DBNull.Value)
+                        {
+                            return null;
+                        }
+
+                        var detail = GetRecord(ReadDecimal(scalar));
+                        return detail != null && detail.Ok ? detail.Record : null;
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public string TryGetEmployeeDisplayName(string empId)
         {
             if (string.IsNullOrWhiteSpace(empId))

@@ -348,6 +348,8 @@
     <Compile Include="Data\PhotoStorage.cs" />
     <Compile Include="Data\RfidModels.cs" />
     <Compile Include="Data\RfidRepository.cs" />
+    <Compile Include="Data\CardVoucherHelper.cs" />
+    <Compile Include="Data\CardVoucherRepository.cs" />
     <Compile Include="Data\RfidValidator.cs" />
     <Compile Include="Data\FamilyCardValidator.cs" />
     <Compile Include="Data\RfidFormSaveService.cs" />
