@@ -264,8 +264,13 @@
     <Content Include="Controls\MarketingSidebar.ascx" />
     <Content Include="Controls\RfidNewRequestForm.ascx" />
     <Content Include="Records.aspx" />
+    <Content Include="Vouchers.aspx" />
+    <Content Include="Content\vouchers.css" />
+    <Content Include="Scripts\rfid-voucher-render.js" />
+    <Content Include="Scripts\vouchers.js" />
     <Content Include="RfidCheck.ashx" />
     <Content Include="RfidRecords.ashx" />
+    <Content Include="CardVouchers.ashx" />
     <Content Include="RfidFormSave.ashx" />
     <Content Include="MarketingUsers.ashx" />
     <Content Include="EmpPhoto.ashx" />
@@ -388,6 +393,13 @@
     <Compile Include="Records.aspx.designer.cs">
       <DependentUpon>Records.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Vouchers.aspx.cs">
+      <DependentUpon>Vouchers.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Vouchers.aspx.designer.cs">
+      <DependentUpon>Vouchers.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -400,6 +412,9 @@
     </Compile>
     <Compile Include="RfidRecords.ashx.cs">
       <DependentUpon>RfidRecords.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="CardVouchers.ashx.cs">
+      <DependentUpon>CardVouchers.ashx</DependentUpon>
     </Compile>
     <Compile Include="RfidFormSave.ashx.cs">
       <DependentUpon>RfidFormSave.ashx</DependentUpon>

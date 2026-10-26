@@ -14,6 +14,7 @@ namespace RFID_Marketing_Form.Controls
             logoImg.Alt = "Bahria Town Karachi";
             navRecords.HRef = ResolveUrl("~/Records.aspx");
             navParentRecords.HRef = ResolveUrl("~/Records.aspx?view=family");
+            navVouchers.HRef = ResolveUrl("~/Vouchers.aspx");
             navUsers.HRef = ResolveUrl("~/AdminUsers.aspx");
             navRoles.HRef = ResolveUrl("~/RolePermissions.aspx");
             navLogout.HRef = ResolveUrl("~/MarketingLogout.aspx");
@@ -32,11 +33,13 @@ namespace RFID_Marketing_Form.Controls
             var ctx = HttpContext.Current;
             navRecords.Visible = MarketingAuthContext.HasPermission(ctx, AppPermissionCodes.ScreenRecords);
             navParentRecords.Visible = MarketingAuthContext.HasPermission(ctx, AppPermissionCodes.ScreenRecords);
+            navVouchers.Visible = MarketingAuthContext.HasPermission(ctx, AppPermissionCodes.ScreenVouchers);
             navUsers.Visible = MarketingAuthContext.HasPermission(ctx, AppPermissionCodes.AdminUsers);
             navRoles.Visible = MarketingAuthContext.HasPermission(ctx, AppPermissionCodes.AdminRoles);
 
             SetActive(navRecords, ActiveSection == MarketingNavSection.Records);
             SetActive(navParentRecords, ActiveSection == MarketingNavSection.ParentRecords);
+            SetActive(navVouchers, ActiveSection == MarketingNavSection.Vouchers);
             SetActive(navUsers, ActiveSection == MarketingNavSection.Users);
             SetActive(navRoles, ActiveSection == MarketingNavSection.Roles);
 

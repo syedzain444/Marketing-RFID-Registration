@@ -17,7 +17,8 @@
     <link href="Content/emp-id-card.css?v=5" rel="stylesheet" />
     <link href="Content/marketing-sidebar.css?v=4" rel="stylesheet" />
     <link href="Content/marketing-wide.css?v=1" rel="stylesheet" />
-    <link href="Content/rfid-records.css?v=10" rel="stylesheet" />
+    <link href="Content/rfid-records.css?v=11" rel="stylesheet" />
+    <link href="Content/vouchers.css?v=1" rel="stylesheet" />
     <link href="Content/marketing-dashboard.css?v=2" rel="stylesheet" />
 </head>
 <body class="records-page marketing-app dashboard-v2">
@@ -344,22 +345,25 @@
             <div class="detail-modal__backdrop" id="voucherBackdrop"></div>
             <div class="detail-modal__sheet detail-modal__sheet--voucher">
                 <button type="button" class="detail-modal__close detail-modal__close--hero" id="voucherClose" aria-label="Close">&times;</button>
-                <header class="voucher-modal__head no-print-voucher">
-                    <div>
+                <header class="voucher-modal__head voucher-modal__head--split no-print-voucher">
+                    <div class="voucher-modal__head-main">
                         <p class="voucher-modal__eyebrow">Payment voucher</p>
                         <h2 id="voucherModalTitle" class="voucher-modal__title">Bahria Town Karachi</h2>
                         <p class="voucher-modal__sub" id="voucherModalSub">Individual voucher</p>
+                        <p class="voucher-modal__db-hint" id="voucherDbHint">Status from database: <strong id="voucherDbStatus">—</strong></p>
                     </div>
                     <div class="voucher-modal__head-actions">
-                        <span id="voucherStatusBadge" class="voucher-status-badge voucher-status-badge--generated">Generated</span>
+                        <span id="voucherStatusBadge" class="voucher-status-badge voucher-status-badge--generated">Unpaid</span>
                         <button type="button" class="btn btn-primary" id="btnVoucherPrint">Print / Save PDF</button>
                     </div>
                 </header>
                 <div class="detail-modal__body voucher-modal__body" id="voucherBody">
                     <p class="detail-loading">Loading voucher…</p>
                 </div>
-                <footer class="detail-modal__foot detail-modal__foot--split no-print-voucher">
-                    <button type="button" class="btn btn-primary" id="btnVoucherMarkPaid">Mark as paid</button>
+                <footer class="detail-modal__foot voucher-modal__foot no-print-voucher">
+                    <button type="button" class="btn btn-primary is-hidden" id="btnVoucherMarkPaid">Mark as paid</button>
+                    <button type="button" class="btn btn-ghost is-hidden" id="btnVoucherMarkUnpaid">Mark as unpaid</button>
+                    <a runat="server" id="lnkVoucherDesk" href="Vouchers.aspx" class="btn btn-ghost voucher-manage-link" Visible="false">Open voucher desk</a>
                     <button type="button" class="btn btn-ghost" id="voucherCloseFoot">Close</button>
                 </footer>
             </div>
@@ -394,7 +398,8 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="Scripts/rfid-form.js?v=17"></script>
         <script src="Scripts/qrcode.min.js?v=1"></script>
-        <script src="Scripts/rfid-records.js?v=38"></script>
+        <script src="Scripts/rfid-voucher-render.js?v=1"></script>
+        <script src="Scripts/rfid-records.js?v=40"></script>
     </form>
 </body>
 </html>

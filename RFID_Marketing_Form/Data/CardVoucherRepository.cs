@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Globalization;
 using Oracle.ManagedDataAccess.Client;
@@ -71,6 +72,75 @@ namespace RFID_Marketing_Form.Data
 
         public RfidRecordsResult MarkVoucherPaid(decimal voucherId, string paidBy)
         {
+            return SetVoucherStatus(voucherId, "PAID", paidBy);
+        }
+
+        public RfidRecordsResult MarkVoucherUnpaid(decimal voucherId, string updatedBy)
+        {
+            return SetVoucherStatus(voucherId, "GENERATED", updatedBy);
+        }
+
+        public RfidRecordsResult SetVoucherStatus(decimal voucherId, string status, string actor)
+        {
+            if (voucherId <= 0)
+            {
+                return RfidRecordsResult.Fail("A valid voucher ID is required.");
+            }
+
+            status = NormalizeVoucherStatus(status);
+            if (status == null)
+            {
+                return RfidRecordsResult.Fail("Status must be PAID or GENERATED (unpaid).");
+            }
+
+            string cs;
+            if (!TryConnectionString(out cs))
+            {
+                return RfidRecordsResult.Fail("Database connection is not configured.");
+            }
+
+            var actorName = NullIfEmpty(actor) ?? "SYSTEM";
+
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    string sql;
+                    if (status == "PAID")
+                    {
+                        sql = "UPDATE " + TableName + @" SET STATUS = 'PAID', PAID_BY = :actor, PAID_ON = SYSDATE,
+                            UPDATED_BY = :actor, UPDATED_ON = SYSDATE WHERE VOUCHER_ID = :id";
+                    }
+                    else
+                    {
+                        sql = "UPDATE " + TableName + @" SET STATUS = 'GENERATED', PAID_BY = NULL, PAID_ON = NULL,
+                            UPDATED_BY = :actor, UPDATED_ON = SYSDATE WHERE VOUCHER_ID = :id";
+                    }
+
+                    using (var cmd = new OracleCommand(sql, conn))
+                    {
+                        cmd.BindByName = true;
+                        cmd.Parameters.Add("actor", OracleDbType.Varchar2).Value = actorName;
+                        cmd.Parameters.Add("id", OracleDbType.Decimal).Value = voucherId;
+                        var rows = cmd.ExecuteNonQuery();
+                        if (rows == 0)
+                        {
+                            return RfidRecordsResult.Fail("Voucher not found.");
+                        }
+                    }
+
+                    return LoadVoucherById(conn, voucherId);
+                }
+            }
+            catch (Exception ex)
+            {
+                return RfidRecordsResult.Fail(RfidErrors.Describe(ex));
+            }
+        }
+
+        public RfidRecordsResult GetVoucherById(decimal voucherId)
+        {
             if (voucherId <= 0)
             {
                 return RfidRecordsResult.Fail("A valid voucher ID is required.");
@@ -87,43 +157,114 @@ namespace RFID_Marketing_Form.Data
                 using (var conn = new OracleConnection(cs))
                 {
                     conn.Open();
-                    using (var cmd = new OracleCommand(
-                        "UPDATE " + TableName + @" SET STATUS = 'PAID', PAID_BY = :paid_by, PAID_ON = SYSDATE,
-                            UPDATED_BY = :paid_by, UPDATED_ON = SYSDATE
-                          WHERE VOUCHER_ID = :id AND STATUS = 'GENERATED'", conn))
-                    {
-                        cmd.BindByName = true;
-                        cmd.Parameters.Add("paid_by", OracleDbType.Varchar2).Value = NullIfEmpty(paidBy) ?? "SYSTEM";
-                        cmd.Parameters.Add("id", OracleDbType.Decimal).Value = voucherId;
-                        var rows = cmd.ExecuteNonQuery();
-                        if (rows == 0)
-                        {
-                            return RfidRecordsResult.Fail("Voucher not found or already paid.");
-                        }
-                    }
-
-                    using (var cmd = new OracleCommand(
-                        "SELECT VOUCHER_ID, ASSIGNMENT_ID, RECORD_SCOPE, VOUCHER_NO, VOUCHER_TYPE, REF_NO, EMPLOYEE_NAME, CNIC, " +
-                        "CATEGORY_NAME, AMOUNT, CARD_COUNT, STATUS, GENERATED_BY, GENERATED_ON, PAID_BY, PAID_ON, REMARKS " +
-                        "FROM " + TableName + " WHERE VOUCHER_ID = :id", conn))
-                    {
-                        cmd.Parameters.Add("id", OracleDbType.Decimal).Value = voucherId;
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            if (!reader.Read())
-                            {
-                                return RfidRecordsResult.Fail("Voucher not found after update.");
-                            }
-
-                            return new RfidRecordsResult { Ok = true, Voucher = ReadVoucher(reader) };
-                        }
-                    }
+                    return LoadVoucherById(conn, voucherId);
                 }
             }
             catch (Exception ex)
             {
                 return RfidRecordsResult.Fail(RfidErrors.Describe(ex));
             }
+        }
+
+        public RfidRecordsResult ListVouchers(string statusFilter)
+        {
+            string cs;
+            if (!TryConnectionString(out cs))
+            {
+                return RfidRecordsResult.Fail("Database connection is not configured.");
+            }
+
+            var filter = NormalizeVoucherStatus(statusFilter);
+            var list = new List<CardVoucherRecord>();
+
+            try
+            {
+                using (var conn = new OracleConnection(cs))
+                {
+                    conn.Open();
+                    var sql =
+                        "SELECT VOUCHER_ID, ASSIGNMENT_ID, RECORD_SCOPE, VOUCHER_NO, VOUCHER_TYPE, REF_NO, EMPLOYEE_NAME, CNIC, " +
+                        "CATEGORY_NAME, AMOUNT, CARD_COUNT, STATUS, GENERATED_BY, GENERATED_ON, PAID_BY, PAID_ON, REMARKS " +
+                        "FROM " + TableName;
+                    if (filter == "PAID")
+                    {
+                        sql += " WHERE STATUS = 'PAID'";
+                    }
+                    else if (filter == "GENERATED")
+                    {
+                        sql += " WHERE STATUS = 'GENERATED'";
+                    }
+
+                    sql += " ORDER BY GENERATED_ON DESC, VOUCHER_ID DESC";
+
+                    using (var cmd = new OracleCommand(sql, conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(ReadVoucher(reader));
+                        }
+                    }
+                }
+
+                return new RfidRecordsResult { Ok = true, Vouchers = list };
+            }
+            catch (OracleException ex)
+            {
+                if (ex.Number == 942)
+                {
+                    return RfidRecordsResult.Fail(
+                        "Table CARD_VOUCHERS was not found. Run Sql/Create_Card_Vouchers_Table.sql on Oracle first.");
+                }
+
+                return RfidRecordsResult.Fail(RfidErrors.Describe(ex));
+            }
+            catch (Exception ex)
+            {
+                return RfidRecordsResult.Fail(RfidErrors.Describe(ex));
+            }
+        }
+
+        private static RfidRecordsResult LoadVoucherById(OracleConnection conn, decimal voucherId)
+        {
+            using (var cmd = new OracleCommand(
+                "SELECT VOUCHER_ID, ASSIGNMENT_ID, RECORD_SCOPE, VOUCHER_NO, VOUCHER_TYPE, REF_NO, EMPLOYEE_NAME, CNIC, " +
+                "CATEGORY_NAME, AMOUNT, CARD_COUNT, STATUS, GENERATED_BY, GENERATED_ON, PAID_BY, PAID_ON, REMARKS " +
+                "FROM " + TableName + " WHERE VOUCHER_ID = :id", conn))
+            {
+                cmd.BindByName = true;
+                cmd.Parameters.Add("id", OracleDbType.Decimal).Value = voucherId;
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read())
+                    {
+                        return RfidRecordsResult.Fail("Voucher not found.");
+                    }
+
+                    return new RfidRecordsResult { Ok = true, Voucher = ReadVoucher(reader) };
+                }
+            }
+        }
+
+        private static string NormalizeVoucherStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return null;
+            }
+
+            var s = status.Trim().ToUpperInvariant();
+            if (s == "UNPAID" || s == "GENERATED" || s == "PENDING")
+            {
+                return "GENERATED";
+            }
+
+            if (s == "PAID")
+            {
+                return "PAID";
+            }
+
+            return null;
         }
 
         private static CardVoucherRecord BuildNewVoucher(

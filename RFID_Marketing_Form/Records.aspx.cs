@@ -42,8 +42,12 @@ namespace RFID_Marketing_Form
                 admin = perms.Contains(AppPermissionCodes.ScreenAdmin),
                 form = perms.Contains(AppPermissionCodes.ScreenForm),
                 formSave = perms.Contains(AppPermissionCodes.ActionFormSave),
-                formClear = perms.Contains(AppPermissionCodes.ActionFormClear)
+                formClear = perms.Contains(AppPermissionCodes.ActionFormClear),
+                voucherManage = Can(AppPermissionCodes.ActionVouchersManage) || Can(AppPermissionCodes.ScreenVouchers),
+                voucherScreen = Can(AppPermissionCodes.ScreenVouchers)
             });
+
+            lnkVoucherDesk.Visible = Can(AppPermissionCodes.ScreenVouchers);
 
             recordsUserLabel.InnerText = UserLabel;
             lnkNewRequest.Visible = Can(AppPermissionCodes.ScreenForm);

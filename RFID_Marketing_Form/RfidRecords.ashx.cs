@@ -197,7 +197,7 @@ namespace RFID_Marketing_Form
                     }
                 }
             }
-            else if (action == "vouchermarkpaid")
+            else if (action == "vouchermarkpaid" || action == "vouchermarkunpaid")
             {
                 var idText = (context.Request["voucherId"] ?? context.Request.QueryString["voucherId"] ?? string.Empty).Trim();
                 decimal voucherId;
@@ -208,8 +208,10 @@ namespace RFID_Marketing_Form
                 else
                 {
                     var voucherRepo = new CardVoucherRepository();
-                    var paidBy = MarketingAuthContext.CurrentEmpId(context) ?? string.Empty;
-                    result = voucherRepo.MarkVoucherPaid(voucherId, paidBy);
+                    var actor = MarketingAuthContext.CurrentEmpId(context) ?? string.Empty;
+                    result = action == "vouchermarkunpaid"
+                        ? voucherRepo.MarkVoucherUnpaid(voucherId, actor)
+                        : voucherRepo.MarkVoucherPaid(voucherId, actor);
                 }
             }
                 else
@@ -303,7 +305,6 @@ namespace RFID_Marketing_Form
 
                     return true;
                 case "voucher":
-                case "vouchermarkpaid":
                     if (!MarketingAuthContext.TryRequireAnyPermission(
                         context,
                         new[]
@@ -312,6 +313,15 @@ namespace RFID_Marketing_Form
                             AppPermissionCodes.ActionRecordsPrint
                         },
                         out err))
+                    {
+                        denied = RfidRecordsResult.Fail(err);
+                        return false;
+                    }
+
+                    return true;
+                case "vouchermarkpaid":
+                case "vouchermarkunpaid":
+                    if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ActionVouchersManage, out err))
                     {
                         denied = RfidRecordsResult.Fail(err);
                         return false;

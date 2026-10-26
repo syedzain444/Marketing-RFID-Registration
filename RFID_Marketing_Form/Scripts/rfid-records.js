@@ -160,81 +160,29 @@
         );
     }
 
-    function formatVoucherAmount(amount) {
-        var n = Number(amount);
-        if (isNaN(n)) return "0";
-        return Math.round(n).toLocaleString("en-PK");
-    }
-
-    function appRoot() {
-        var root = window.RFID_APP_ROOT || "/";
-        if (root.charAt(root.length - 1) !== "/") root += "/";
-        return root;
-    }
-
-    function buildVoucherCopyHtml(copyName, v) {
-        var date = esc(v.GeneratedOn || "");
-        var amount = formatVoucherAmount(v.Amount);
-        var words = esc(v.AmountWords || "");
-        var logo = esc(appRoot() + "Images/LogoB.png");
-        return (
-            '<div class="voucher-copy">' +
-            '<div class="voucher-copy__label">' + esc(copyName) + "</div>" +
-            '<div class="voucher-copy__brand">' +
-            '<img src="' + logo + '" alt="Bahria Town" />' +
-            "<h3>Bahria Town Karachi Project</h3>" +
-            "<p>Commercial RFID card</p></div>" +
-            '<div class="voucher-copy__row">' +
-            "<div><span>Date:</span> <strong>" + date + "</strong></div>" +
-            '<div class="voucher-copy__no">' + esc(v.VoucherNo || "") + "</div></div>" +
-            '<div class="voucher-copy__fields">' +
-            '<div class="voucher-copy__line"><span><strong>Ref:</strong> ' + esc(v.RefNo || "—") + "</span>" +
-            '<span><strong>Category:</strong> ' + esc(v.CategoryName || "—") + "</span></div>" +
-            '<div class="voucher-copy__line"><span><strong>Name:</strong> ' + esc(v.EmployeeName || "—") + "</span></div>" +
-            '<div class="voucher-copy__line"><span><strong>CNIC:</strong> ' + esc(v.Cnic || "—") + "</span>" +
-            '<span><strong>No of Cards:</strong> ' + esc(String(v.CardCount || 1)) + "</span></div></div>" +
-            '<div class="voucher-copy__bank">' +
-            '<div><strong>Account No. UBL:</strong> <span class="rfid-mono">PK09UNIL0109000227673401</span></div>' +
-            "<div><strong>Account Title:</strong> BAHRIA TOWN (PVT) LTD COMMERCIAL RFID CARD</div>" +
-            '<div class="voucher-copy__amount">Amount Rs: <strong>' + amount + "</strong></div>" +
-            '<div><strong>Amount In Words:</strong> <em>' + words + "</em></div></div>" +
-            '<div class="voucher-copy__fields" style="margin-top:10px">' +
-            '<div class="voucher-copy__line"><span><strong>DD/PO No:</strong></span><span class="voucher-copy__blank"></span></div>' +
-            '<div class="voucher-copy__line"><span><strong>Drawn on Bank:</strong></span><span class="voucher-copy__blank"></span></div>' +
-            '<div class="voucher-copy__line"><span><strong>Depositor Name:</strong></span><span class="voucher-copy__blank"></span></div>' +
-            '<div class="voucher-copy__line"><span><strong>Depositor CNIC:</strong></span><span class="voucher-copy__blank"></span></div></div>' +
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-            '<div class="voucher-copy__sig"><div>Depositor Name / Sign</div></div>' +
-            '<div class="voucher-copy__sig"><div>Contact No.</div></div></div>' +
-            '<div class="voucher-copy__fine">Cash/Cheque should always be deposited at the respective counter and electronic computer generated receipt printed through flatbed printer on deposit slip/challan should be obtained before leaving the counter.</div>' +
-            '<div class="voucher-copy__urdu">براہ کرم رقم جمع کرواتے وقت کمپیوٹرائزڈ رسید ضرور حاصل کریں۔</div>' +
-            "</div>"
-        );
-    }
-
-    function renderVoucherHtml(v) {
-        return (
-            '<div class="voucher-grid">' +
-            buildVoucherCopyHtml("Bank Copy", v) +
-            buildVoucherCopyHtml("Bahria Copy", v) +
-            buildVoucherCopyHtml("Customer Copy", v) +
-            "</div>"
-        );
+    function canVoucherManage() {
+        return can("voucherManage");
     }
 
     function updateVoucherStatusUi(v) {
-        var badge = document.getElementById("voucherStatusBadge");
-        var btnPaid = document.getElementById("btnVoucherMarkPaid");
+        var vr = window.RfidVoucherRender;
+        if (!vr) return;
         var status = (v && v.Status ? v.Status : "GENERATED").toUpperCase();
-        if (badge) {
-            badge.textContent = status === "PAID" ? "Paid" : "Generated";
-            badge.classList.toggle("voucher-status-badge--paid", status === "PAID");
-            badge.classList.toggle("voucher-status-badge--generated", status !== "PAID");
+        var paid = status === "PAID";
+        vr.applyStatusBadge(document.getElementById("voucherStatusBadge"), status);
+        var dbStatus = document.getElementById("voucherDbStatus");
+        if (dbStatus) {
+            dbStatus.textContent = paid ? "PAID" : "GENERATED (unpaid)";
         }
+        var btnPaid = document.getElementById("btnVoucherMarkPaid");
+        var btnUnpaid = document.getElementById("btnVoucherMarkUnpaid");
         if (btnPaid) {
-            var hide = status === "PAID" || !can("print");
-            btnPaid.classList.toggle("is-hidden", hide);
-            btnPaid.disabled = status === "PAID";
+            btnPaid.classList.toggle("is-hidden", paid || !canVoucherManage());
+            btnPaid.disabled = paid;
+        }
+        if (btnUnpaid) {
+            btnUnpaid.classList.toggle("is-hidden", !paid || !canVoucherManage());
+            btnUnpaid.disabled = !paid;
         }
     }
 
@@ -268,7 +216,7 @@
                         (v.VoucherNo || "") +
                         (v.GeneratedBy ? " · by " + v.GeneratedBy : "");
                 }
-                if (body) body.innerHTML = renderVoucherHtml(v);
+                if (body && window.RfidVoucherRender) body.innerHTML = RfidVoucherRender.renderGrid(v);
                 updateVoucherStatusUi(v);
             })
             .catch(function (err) {
@@ -277,128 +225,41 @@
             });
     }
 
-    function voucherPrintInlineCss() {
-        return (
-            "@page { size: A4 landscape; margin: 5mm; }" +
-            "*, *::before, *::after { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }" +
-            "html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }" +
-            ".voucher-print-root { padding: 0; background: #fff; }" +
-            ".voucher-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; }" +
-            ".voucher-copy { background: #fff; border-right: 2px dashed #94a3b8; padding: 0 10px 8px 0; font-size: 10px; color: #0f172a; page-break-inside: avoid; break-inside: avoid; }" +
-            ".voucher-copy:last-child { border-right: 0; padding-right: 0; }" +
-            ".voucher-copy__label { text-align: right; font-weight: 800; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #475569; margin-bottom: 6px; }" +
-            ".voucher-copy__brand { text-align: center; margin-bottom: 6px; }" +
-            ".voucher-copy__brand img { height: 48px; width: auto; object-fit: contain; margin: 0 auto 4px; display: block; }" +
-            ".voucher-copy__brand h3 { margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; }" +
-            ".voucher-copy__brand p { margin: 2px 0 0; font-size: 10px; font-weight: 700; color: #334155; }" +
-            ".voucher-copy__row { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 6px; }" +
-            ".voucher-copy__no { background: #e2e8f0; border: 1px solid #94a3b8; padding: 3px 8px; font-family: monospace; font-weight: 800; font-size: 10px; border-radius: 4px; }" +
-            ".voucher-copy__fields { margin-top: 6px; font-weight: 600; }" +
-            ".voucher-copy__line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-bottom: 4px; }" +
-            ".voucher-copy__bank { border-top: 2px solid #0f172a; margin-top: 6px; padding-top: 6px; }" +
-            ".voucher-copy__amount { font-weight: 900; font-size: 12px; }" +
-            ".voucher-copy__urdu { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; text-align: center; font-weight: 700; font-size: 12px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #cbd5e1; }" +
-            ".voucher-copy__fine { font-size: 7px; line-height: 1.35; color: #64748b; margin-top: 6px; padding-top: 4px; border-top: 1px solid #e2e8f0; }" +
-            ".voucher-copy__blank { border-bottom: 1px solid #0f172a; flex: 1; min-height: 12px; margin: 0 4px; }" +
-            ".voucher-copy__sig { text-align: center; margin-top: 14px; font-size: 9px; font-weight: 700; }" +
-            ".voucher-copy__sig div { border-top: 1px solid #0f172a; padding-top: 3px; margin-top: 20px; }"
-        );
-    }
-
-    function buildVoucherPrintDocumentHtml(gridOuterHtml) {
-        var fonts =
-            "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap";
-        return (
-            '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />' +
-            '<title>Payment Voucher</title>' +
-            '<link rel="stylesheet" href="' + esc(fonts) + '" />' +
-            "<style>" +
-            voucherPrintInlineCss() +
-            "body { font-family: Inter, sans-serif; }</style></head><body>" +
-            '<div class="voucher-print-root">' +
-            gridOuterHtml +
-            "</div></body></html>"
-        );
-    }
-
     function printVoucherPreview() {
-        var grid = document.querySelector("#voucherBody .voucher-grid");
-        if (!grid) {
+        if (!window.RfidVoucherRender || !RfidVoucherRender.printFromContainer("#voucherBody .voucher-grid")) {
             showAlert("Nothing to print. Wait for the voucher to load.", true);
-            return;
         }
+    }
 
-        var clone = grid.cloneNode(true);
-        var imgs = clone.querySelectorAll("img[src]");
-        for (var i = 0; i < imgs.length; i++) {
-            var src = imgs[i].getAttribute("src") || "";
-            try {
-                imgs[i].setAttribute("src", new URL(src, window.location.href).href);
-            } catch (urlErr) {
-                /* keep src */
-            }
-        }
-
-        var iframe = document.createElement("iframe");
-        iframe.setAttribute("title", "Voucher print");
-        iframe.setAttribute("aria-hidden", "true");
-        iframe.style.cssText =
-            "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;pointer-events:none;";
-        document.body.appendChild(iframe);
-
-        var html = buildVoucherPrintDocumentHtml(clone.outerHTML);
-        var win = iframe.contentWindow;
-        var idoc = win.document;
-        idoc.open();
-        idoc.write(html);
-        idoc.close();
-
-        try {
-            absolutizeDocumentImages(idoc, win.location.href);
-        } catch (absErr) {
-            /* ignore */
-        }
-
-        function cleanup() {
-            setTimeout(function () {
-                if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-            }, 3000);
-        }
-
-        waitForDocumentImages(idoc, 8000)
-            .then(function () {
-                win.focus();
-                win.print();
-            })
-            .catch(function () {
-                try {
-                    win.focus();
-                    win.print();
-                } catch (printErr) {
-                    showAlert("Print failed. Try again or use another browser.", true);
-                }
-            })
-            .finally(cleanup);
+    function setVoucherStatusFromRecords(action) {
+        if (!voucherCtx || !voucherCtx.voucher || !voucherCtx.voucher.VoucherId) return;
+        var fd = new FormData();
+        fd.append("action", action);
+        fd.append("voucherId", String(voucherCtx.voucher.VoucherId));
+        return fetchJson("RfidRecords.ashx", { method: "POST", body: fd }).then(function (payload) {
+            if (!payload.Voucher) throw new Error("Update failed.");
+            voucherCtx.voucher = payload.Voucher;
+            updateVoucherStatusUi(payload.Voucher);
+            showAlert(action === "vouchermarkpaid" ? "Marked as paid in database." : "Marked as unpaid in database.", false);
+        });
     }
 
     function markVoucherPaid() {
-        if (!voucherCtx || !voucherCtx.voucher || !voucherCtx.voucher.VoucherId) return;
         var btn = document.getElementById("btnVoucherMarkPaid");
         if (btn) btn.disabled = true;
-        var fd = new FormData();
-        fd.append("action", "vouchermarkpaid");
-        fd.append("voucherId", String(voucherCtx.voucher.VoucherId));
-        fetchJson("RfidRecords.ashx", { method: "POST", body: fd })
-            .then(function (payload) {
-                if (!payload.Voucher) throw new Error("Update failed.");
-                voucherCtx.voucher = payload.Voucher;
-                updateVoucherStatusUi(payload.Voucher);
-                showAlert("Voucher marked as paid.", false);
-            })
-            .catch(function (err) {
-                showAlert(err.message || "Could not update voucher.", true);
-                if (btn) btn.disabled = false;
-            });
+        setVoucherStatusFromRecords("vouchermarkpaid").catch(function (err) {
+            showAlert(err.message || "Could not update voucher.", true);
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    function markVoucherUnpaid() {
+        var btn = document.getElementById("btnVoucherMarkUnpaid");
+        if (btn) btn.disabled = true;
+        setVoucherStatusFromRecords("vouchermarkunpaid").catch(function (err) {
+            showAlert(err.message || "Could not update voucher.", true);
+            if (btn) btn.disabled = false;
+        });
     }
 
     function setPrintButtonForRecord(id, active) {
@@ -2955,6 +2816,8 @@
         if (btnVoucherPrint) btnVoucherPrint.addEventListener("click", printVoucherPreview);
         var btnVoucherMarkPaid = document.getElementById("btnVoucherMarkPaid");
         if (btnVoucherMarkPaid) btnVoucherMarkPaid.addEventListener("click", markVoucherPaid);
+        var btnVoucherMarkUnpaid = document.getElementById("btnVoucherMarkUnpaid");
+        if (btnVoucherMarkUnpaid) btnVoucherMarkUnpaid.addEventListener("click", markVoucherUnpaid);
 
         $("#recordsTable").on("change", ".status-switch__input", function () {
             var input = this;

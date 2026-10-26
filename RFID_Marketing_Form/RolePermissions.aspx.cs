@@ -75,6 +75,12 @@ namespace RFID_Marketing_Form
 
                 { AppPermissionCodes.ActionRecordsPhoto, "Upload or replace the employee photo." },
 
+                { AppPermissionCodes.ScreenVouchers, "Open the payment vouchers desk." },
+
+                { AppPermissionCodes.ActionVouchersList, "Load and search payment vouchers." },
+
+                { AppPermissionCodes.ActionVouchersManage, "Mark vouchers paid or unpaid (updates STATUS in CARD_VOUCHERS)." },
+
                 { AppPermissionCodes.AdminUsers, "Create users and assign roles." },
 
                 { AppPermissionCodes.AdminRoles, "Change which permissions each role has." }

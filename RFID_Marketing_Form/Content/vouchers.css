@@ -1,0 +1,175 @@
+.vouchers-panel__head {
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.voucher-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.voucher-chip {
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.voucher-chip:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+}
+
+.voucher-chip.is-active {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #fff;
+}
+
+.voucher-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border: none;
+}
+
+.voucher-pill--paid {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.voucher-pill--unpaid {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+button.voucher-pill-btn {
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(15, 35, 35, 0.06);
+}
+
+button.voucher-pill-btn:hover {
+    filter: brightness(0.97);
+    transform: translateY(-1px);
+}
+
+.voucher-amt {
+    color: #0a7a62;
+    font-variant-numeric: tabular-nums;
+}
+
+.voucher-card-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    background: #ecfdf5;
+    color: #0a7a62;
+    border: 1px solid #99f6e4;
+}
+
+.voucher-meta {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.voucher-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.voucher-row-actions button {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #0f172a;
+}
+
+.voucher-row-actions .btn-voucher-toggle--paid {
+    color: #fff;
+    border-color: #0a7a62;
+    background: #0a7a62;
+}
+
+.voucher-row-actions .btn-voucher-toggle--paid:hover {
+    background: #086b55;
+    border-color: #086b55;
+}
+
+.voucher-row-actions .btn-voucher-toggle--unpaid {
+    color: #92400e;
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+
+.voucher-row-actions button:hover {
+    border-color: var(--teal);
+}
+
+.voucher-status-modal__transition {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 24px 8px;
+}
+
+.voucher-status-modal__head {
+    padding-bottom: 0;
+}
+
+.detail-modal .is-hidden {
+    display: none !important;
+}
+
+.voucher-modal__head--split {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.voucher-modal__head-main {
+    flex: 1;
+    min-width: 200px;
+}
+
+.voucher-modal__foot {
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.voucher-copy__fields--extra {
+    margin-top: 10px;
+}
+
+.voucher-copy__sig-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}

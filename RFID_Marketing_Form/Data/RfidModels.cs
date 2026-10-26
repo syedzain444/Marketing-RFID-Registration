@@ -158,6 +158,7 @@ namespace RFID_Marketing_Form.Data
         public RfidRecord Record { get; set; }
         public List<FamilyCardRecord> FamilyCards { get; set; }
         public CardVoucherRecord Voucher { get; set; }
+        public List<CardVoucherRecord> Vouchers { get; set; }
         public string Status { get; set; }
         public string StatusRemarks { get; set; }
 

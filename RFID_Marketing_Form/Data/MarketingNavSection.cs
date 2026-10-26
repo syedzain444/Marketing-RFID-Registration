@@ -7,6 +7,7 @@ namespace RFID_Marketing_Form.Data
         ParentRecords,
         Form,
         Users,
-        Roles
+        Roles,
+        Vouchers
     }
 }

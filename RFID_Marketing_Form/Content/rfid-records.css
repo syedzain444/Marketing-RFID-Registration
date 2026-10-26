@@ -2149,8 +2149,25 @@ table.records-table tbody tr:last-child td {
 
 /* Payment voucher modal */
 .detail-modal__sheet--voucher {
-    width: min(96vw, 1280px);
+    width: min(98vw, 1320px);
     max-height: 94vh;
+}
+
+.detail-modal__sheet--voucher .detail-modal__body {
+    overflow: auto;
+    max-height: calc(94vh - 160px);
+}
+
+.voucher-modal__db-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.voucher-modal__db-hint strong {
+    color: var(--ink);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
 }
 
 .voucher-modal__head {
