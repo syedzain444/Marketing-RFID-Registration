@@ -153,7 +153,7 @@
         <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="Scripts/rfid-voucher-render.js?v=1"></script>
-        <script src="Scripts/vouchers.js?v=3"></script>
+        <script src="Scripts/vouchers.js?v=4"></script>
     </form>
 </body>
 </html>

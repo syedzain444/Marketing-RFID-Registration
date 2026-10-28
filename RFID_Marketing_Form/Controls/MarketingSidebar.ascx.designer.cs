@@ -5,6 +5,7 @@ namespace RFID_Marketing_Form.Controls
         protected global::System.Web.UI.HtmlControls.HtmlImage logoImg;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor navLogout;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor navRecords;
+        protected global::System.Web.UI.HtmlControls.HtmlAnchor navEmployeeRfid;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor navParentRecords;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor navVouchers;
         protected global::System.Web.UI.HtmlControls.HtmlAnchor navUsers;

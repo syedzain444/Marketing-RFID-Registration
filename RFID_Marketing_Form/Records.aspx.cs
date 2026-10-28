@@ -13,13 +13,27 @@ namespace RFID_Marketing_Form
         protected string IssuedByDefaultNameJson { get; private set; }
         protected string RecordScope { get; private set; }
         protected bool IsFamilyView { get; private set; }
+        protected bool IsAssignView { get; private set; }
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            Require(AppPermissionCodes.ScreenRecords);
+            var path = (Request.AppRelativeCurrentExecutionFilePath ?? string.Empty).ToUpperInvariant();
+            IsAssignView = path.IndexOf("EMPLOYEERFIDMANAGEMENT.ASPX", StringComparison.Ordinal) >= 0;
+            if (IsAssignView)
+            {
+                if (!Can(AppPermissionCodes.ScreenEmployeeRfid) && !Can(AppPermissionCodes.ScreenRecords))
+                {
+                    Require(AppPermissionCodes.ScreenEmployeeRfid);
+                }
+            }
+            else
+            {
+                Require(AppPermissionCodes.ScreenRecords);
+            }
+
             var view = (Request.QueryString["view"] ?? string.Empty).Trim();
-            IsFamilyView = view.Equals("family", StringComparison.OrdinalIgnoreCase);
-            RecordScope = IsFamilyView ? "family" : "employee";
+            IsFamilyView = !IsAssignView && view.Equals("family", StringComparison.OrdinalIgnoreCase);
+            RecordScope = IsFamilyView ? "family" : (IsAssignView ? "assign" : "employee");
             var user = CurrentMarketingUser();
             UserLabel = user == null
                 ? string.Empty
@@ -68,6 +82,24 @@ namespace RFID_Marketing_Form
                     recordsPanelHint.InnerText = "View and manage family RFID cards (card name, relationship, status, and print).";
                 }
                 SetMarketingNav(marketingSidebar, MarketingNavSection.ParentRecords);
+            }
+            else if (IsAssignView)
+            {
+                Page.Title = "Employee RFID Management";
+                if (recordsHeading != null) recordsHeading.InnerText = "Employee RFID Management";
+                if (recordsSubtitle != null)
+                {
+                    recordsSubtitle.InnerHtml =
+                        "Active employees from <span class=\"mono-soft\">SPERS.V_EMPS</span> · RFID saved to <span id=\"recordsTableLabel\" class=\"mono-soft\">SPERS.RFID_CARD_ASSIGN</span>";
+                }
+                if (recordsPanelHint != null)
+                {
+                    recordsPanelHint.InnerText =
+                        "All active employees are listed below. Enter RFID on the grid to create or update the ACTIVE assignment in RFID_CARD_ASSIGN.";
+                }
+                lnkNewRequest.Visible = false;
+                lnkAddFamily.Visible = false;
+                SetMarketingNav(marketingSidebar, MarketingNavSection.EmployeeRfid);
             }
             else
             {

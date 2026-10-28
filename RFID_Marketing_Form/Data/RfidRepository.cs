@@ -2820,6 +2820,24 @@ namespace RFID_Marketing_Form.Data
             return line;
         }
 
+        /// <summary>Employee RFID Management uses V_EMPS / EMP_MST / RFID_CARD_ASSIGN — not RfidTableName.</summary>
+        public static string DescribeAssign(Exception ex)
+        {
+            var oracle = FindOracle(ex);
+            if (oracle != null)
+            {
+                switch (oracle.Number)
+                {
+                    case 904:
+                        return "Employee card data could not be loaded (Oracle ORA-00904: invalid column). Rebuild the site DLL and ask IT which column failed if this persists.";
+                    case 942:
+                        return "A required SPERS object was not found (table or view). Check V_EMPS, EMP_MST, and RFID_CARD_ASSIGN access.";
+                }
+            }
+
+            return Describe(ex);
+        }
+
         public static bool IsUniqueViolation(Exception ex)
         {
             var oracle = FindOracle(ex);

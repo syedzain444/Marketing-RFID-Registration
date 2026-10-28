@@ -9,6 +9,36 @@ window.RfidPhotos = (function () {
         return root;
     }
 
+    function employeeImageUrlTemplate() {
+        var tpl = window.RFID_EMPLOYEE_IMAGE_URL;
+        if (tpl && String(tpl).trim()) {
+            return String(tpl).trim();
+        }
+        return "http://172.16.10.54/EImages/EImages/{id}.jpg";
+    }
+
+    function normalizeEmpId(empId) {
+        return String(empId == null ? "" : empId).trim();
+    }
+
+    /** Same-origin proxy (server pulls HR EImages) — works in PDF/html2canvas. */
+    function employeeImageUrl(empId) {
+        var id = normalizeEmpId(empId);
+        if (!id) {
+            return "";
+        }
+        return appRoot() + "EmpHrPhoto.ashx?empId=" + encodeURIComponent(id);
+    }
+
+    /** Direct HR URL (browser display only; not for canvas/PDF). */
+    function employeeImageDirectUrl(empId) {
+        var id = normalizeEmpId(empId);
+        if (!id) {
+            return "";
+        }
+        return employeeImageUrlTemplate().replace(/\{id\}/gi, encodeURIComponent(id));
+    }
+
     function normalizeRelative(path) {
         if (!path) return "";
         var p = String(path).trim();
@@ -30,6 +60,7 @@ window.RfidPhotos = (function () {
     function handlerUrl(path) {
         var p = normalizeRelative(path);
         if (!p) return "";
+        if (/^https?:\/\//i.test(p)) return p;
         return appRoot() + "EmpPhoto.ashx?p=" + encodeURIComponent(p);
     }
 
@@ -53,11 +84,28 @@ window.RfidPhotos = (function () {
         return handlerUrl(path) || publicUrl(path);
     }
 
+    /** Employee cards: HR image server first, uploaded/stored path as fallback. */
+    function employeePhotoUrls(path, empId) {
+        var primary = employeeImageUrl(empId);
+        var p = normalizeRelative(path);
+        var fallback = "";
+        if (p) {
+            fallback = /^https?:\/\//i.test(p) ? p : displayUrl(p);
+        }
+        if (primary) {
+            return { primary: primary, fallback: fallback };
+        }
+        return { primary: fallback, fallback: handlerUrl(path) || "" };
+    }
+
     return {
         appRoot: appRoot,
         publicUrl: publicUrl,
         handlerUrl: handlerUrl,
         displayUrl: displayUrl,
+        employeeImageUrl: employeeImageUrl,
+        employeeImageDirectUrl: employeeImageDirectUrl,
+        employeePhotoUrls: employeePhotoUrls,
         uploadFile: uploadFile
     };
 })();

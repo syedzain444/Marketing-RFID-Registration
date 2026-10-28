@@ -826,14 +826,29 @@ var RfidForm = (function () {
         updatePassPhoto();
     }
 
-    function resolvePhotoDisplaySrc(path, objectUrl) {
+    function resolvePhotoDisplaySrc(path, objectUrl, empId) {
         if (objectUrl) return objectUrl;
         path = (path || "").trim();
+        var ctx = activePhotoContext();
+        if (ctx !== "family" && window.RfidPhotos && window.RfidPhotos.employeePhotoUrls) {
+            var id = empId != null ? empId : val("txtEmpId");
+            var urls = window.RfidPhotos.employeePhotoUrls(path && path !== "Uploading…" ? path : "", id);
+            if (urls.primary) return urls.primary;
+        }
         if (!path || path === "Uploading…") return "";
         if (window.RfidPhotos) return window.RfidPhotos.displayUrl(path);
         if (/^https?:\/\//i.test(path)) return path;
         var p = path.replace(/\\/g, "/").replace(/^\/+/, "");
         return p ? "EmpPhoto.ashx?p=" + encodeURIComponent(p) : "";
+    }
+
+    function resolvePhotoDisplayFallback(path) {
+        path = (path || "").trim();
+        if (!path || path === "Uploading…") return "";
+        if (window.RfidPhotos) {
+            return window.RfidPhotos.displayUrl(path) || window.RfidPhotos.handlerUrl(path);
+        }
+        return "";
     }
 
     function updatePassPhoto() {
@@ -843,6 +858,7 @@ var RfidForm = (function () {
         var ctx = activePhotoContext();
         var path = ctx === "family" ? val("txtFamilyPhotoPath") : val("txtPhotoPath");
         var src = resolvePhotoDisplaySrc(path, photoObjectUrls[ctx]);
+        var fallback = ctx === "family" ? "" : resolvePhotoDisplayFallback(path);
         if (src) {
             img.onload = function () {
                 img.classList.remove("is-hidden");
@@ -850,12 +866,18 @@ var RfidForm = (function () {
                 if (ph) ph.classList.add("is-hidden");
             };
             img.onerror = function () {
+                if (fallback && img.dataset.fallback !== "1") {
+                    img.dataset.fallback = "1";
+                    img.src = fallback;
+                    return;
+                }
                 img.classList.add("is-hidden");
                 img.classList.remove("is-loaded");
                 if (ph) {
                     ph.classList.remove("is-hidden");
                 }
             };
+            img.dataset.fallback = "0";
             img.src = src;
         } else {
             img.removeAttribute("src");

@@ -127,13 +127,69 @@
         return data;
     }
 
+    function headerColumnCount() {
+        return document.querySelectorAll("#vouchersTable thead tr:first-child th").length;
+    }
+
+    function destroyVouchersTableIfNeeded() {
+        var $t = $("#vouchersTable");
+        if ($.fn.DataTable.isDataTable($t)) {
+            $t.DataTable().clear().destroy();
+        }
+        $t.find("tbody").empty();
+        table = null;
+    }
+
+    function initOrRefreshTable(rows) {
+        var data = renderTableData(rows);
+        var colCount = headerColumnCount();
+        if (colCount < 1) {
+            showAlert("Voucher table header is missing.", true);
+            return;
+        }
+        if (data.length > 0 && data[0].length !== colCount) {
+            destroyVouchersTableIfNeeded();
+            showAlert(
+                "Grid columns were out of date (" +
+                    data[0].length +
+                    " cells vs " +
+                    colCount +
+                    " headers). Table was reset — please hard refresh (Ctrl+F5) if this repeats.",
+                true
+            );
+        }
+        if (table && table.columns().count() !== colCount) {
+            destroyVouchersTableIfNeeded();
+        }
+        var columnDefs = [
+            { targets: [5], className: "dt-center" },
+            { targets: [6, colCount - 1], orderable: false }
+        ];
+        if (!table) {
+            table = $("#vouchersTable").DataTable({
+                data: data,
+                order: [[0, "desc"]],
+                pageLength: 25,
+                autoWidth: false,
+                columnDefs: columnDefs,
+                language: {
+                    emptyTable: "No vouchers to show",
+                    zeroRecords: "No matching vouchers"
+                }
+            });
+        } else {
+            table.clear();
+            if (data.length) {
+                table.rows.add(data);
+            }
+            table.draw(false);
+        }
+    }
+
     function refreshTable() {
         var rows = filterRows(allRows);
         updateStats(allRows);
-        if (!table) return;
-        table.clear();
-        table.rows.add(renderTableData(rows));
-        table.draw(false);
+        initOrRefreshTable(rows);
     }
 
     function loadVouchers() {
@@ -282,14 +338,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        table = $("#vouchersTable").DataTable({
-            order: [[0, "desc"]],
-            pageLength: 25,
-            columnDefs: [
-                { targets: [5], className: "dt-center" },
-                { targets: [6, 9], orderable: false }
-            ]
-        });
+        if ($.fn.dataTable) {
+            $.fn.dataTable.ext.errMode = "none";
+        }
         bindEvents();
         loadVouchers();
     });

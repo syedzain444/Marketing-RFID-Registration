@@ -5,6 +5,7 @@ namespace RFID_Marketing_Form.Data
     {
         public const string ScreenForm = "screen.form";
         public const string ScreenRecords = "screen.records";
+        public const string ScreenEmployeeRfid = "screen.employee.rfid";
         public const string ScreenVouchers = "screen.vouchers";
         public const string ScreenAdmin = "screen.admin";
 

@@ -3,11 +3,48 @@
 
     var table = null;
     var cachedRows = [];
+    var cachedAllRows = [];
+    var assignStatusTab = "assigned";
     var statusChangeCtx = null;
     var printModalScope = "employee";
 
     function isFamilyRecordsScope() {
         return (window.RFID_RECORD_SCOPE || "employee") === "family";
+    }
+
+    function isAssignRecordsScope() {
+        return (window.RFID_RECORD_SCOPE || "employee") === "assign";
+    }
+
+    function isToggleableRecordStatus(status) {
+        var s = (status || "").toLowerCase();
+        return s === "active" || s === "inactive";
+    }
+
+    function recordField(record, name) {
+        if (!record || !name) return "";
+        if (record[name] != null && String(record[name]).trim()) return String(record[name]).trim();
+        var camel = name.charAt(0).toLowerCase() + name.slice(1);
+        if (record[camel] != null && String(record[camel]).trim()) return String(record[camel]).trim();
+        return "";
+    }
+
+    function parseGradeNumber(value) {
+        var digits = String(value || "").replace(/[^\d]/g, "");
+        if (!digits) return 0;
+        var n = parseInt(digits, 10);
+        return isNaN(n) ? 0 : n;
+    }
+
+    /** V_EMPS GRD_AB / GRD_ID: grade &gt; 5 → OFFICIAL, else EMPLOYEE (EmpCard rule). */
+    function resolveCardGradeBadge(record) {
+        var fromApi = recordField(record, "CardBadge");
+        if (fromApi) return fromApi.toUpperCase();
+        var gradeNum = parseGradeNumber(recordField(record, "Grade"));
+        if (gradeNum <= 0) {
+            gradeNum = parseGradeNumber(recordField(record, "GradeId"));
+        }
+        return gradeNum > 5 ? "OFFICIAL" : "EMPLOYEE";
     }
 
     function perms() {
@@ -85,6 +122,8 @@
         var url = "RfidRecords.ashx" + (query ? "?" + query : "");
         if (isFamilyRecordsScope()) {
             url += (url.indexOf("?") >= 0 ? "&" : "?") + "scope=family";
+        } else if (isAssignRecordsScope()) {
+            url += (url.indexOf("?") >= 0 ? "&" : "?") + "scope=assign";
         }
         return url;
     }
@@ -129,6 +168,106 @@
         return (status || "").toLowerCase() === "active";
     }
 
+    function isInactiveStatus(status) {
+        return (status || "").toLowerCase() === "inactive";
+    }
+
+    function normalizeAssignTab(tab) {
+        if (tab === "inactive" || tab === "unassigned") {
+            return "unassigned";
+        }
+        return "assigned";
+    }
+
+    /** Assigned tab: saved in RFID_CARD_ASSIGN (e.g. 25258). Unassigned tab: V_EMPS only, ID — (e.g. 21543). */
+    function assignRowOnAssignedTab(record) {
+        return assignHasSavedRecord(record);
+    }
+
+    function assignRowOnUnassignedTab(record) {
+        return !assignHasSavedRecord(record);
+    }
+
+    function filterAssignRowsByTab(rows, tab) {
+        rows = rows || [];
+        tab = normalizeAssignTab(tab || assignStatusTab);
+        if (tab === "unassigned") {
+            return rows.filter(assignRowOnUnassignedTab);
+        }
+        return rows.filter(assignRowOnAssignedTab);
+    }
+
+    function syncAssignTabFilteredRows() {
+        if (!isAssignRecordsScope()) {
+            return;
+        }
+        cachedRows = filterAssignRowsByTab(cachedAllRows);
+    }
+
+    function updateAssignTabCounts(rows) {
+        if (!isAssignRecordsScope()) {
+            return;
+        }
+        var activeEl = document.getElementById("assignTabActiveCount");
+        var inactiveEl = document.getElementById("assignTabInactiveCount");
+        if (!activeEl && !inactiveEl) {
+            return;
+        }
+        var source = rows || cachedAllRows;
+        if (!source || !source.length) {
+            if (activeEl) activeEl.textContent = "0";
+            if (inactiveEl) inactiveEl.textContent = "0";
+            return;
+        }
+        var assigned = 0;
+        var unassigned = 0;
+        for (var i = 0; i < source.length; i++) {
+            if (assignRowOnUnassignedTab(source[i])) {
+                unassigned++;
+            } else if (assignRowOnAssignedTab(source[i])) {
+                assigned++;
+            }
+        }
+        if (activeEl) activeEl.textContent = String(assigned);
+        if (inactiveEl) inactiveEl.textContent = String(unassigned);
+    }
+
+    function updateAssignPanelTitleForTab() {
+        if (!isAssignRecordsScope()) {
+            return;
+        }
+        var title = document.querySelector(".records-panel__title");
+        var hint = document.getElementById("recordsPanelHint");
+        if (normalizeAssignTab(assignStatusTab) === "unassigned") {
+            if (title) title.textContent = "Inactive records";
+            if (hint) {
+                hint.textContent =
+                    "Active employees with no RFID_CARD_ASSIGN row yet (ID —). Enter RFID here or open Print card; saving creates the assignment.";
+            }
+        } else {
+            if (title) title.textContent = "Active records";
+            if (hint) {
+                hint.textContent =
+                    "Employees with an active RFID assignment on file (ID, status Active). Update RFID on the grid or use Print / voucher actions.";
+            }
+        }
+    }
+
+    function setAssignStatusTab(tab) {
+        if (!isAssignRecordsScope()) {
+            return;
+        }
+        assignStatusTab = normalizeAssignTab(tab);
+        document.querySelectorAll(".assign-records-tab").forEach(function (btn) {
+            var on = normalizeAssignTab(btn.getAttribute("data-assign-tab")) === assignStatusTab;
+            btn.classList.toggle("is-active", on);
+            btn.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        updateAssignPanelTitleForTab();
+        syncAssignTabFilteredRows();
+        refreshTableFromCache();
+    }
+
     function statusBadge(status) {
         var s = (status || "").toLowerCase();
         if (s === "active") return '<span class="badge badge--active">Active</span>';
@@ -136,23 +275,125 @@
         return '<span class="badge badge--muted">' + esc(status || "—") + "</span>";
     }
 
+    function assignRecordId(record) {
+        if (!record) {
+            return null;
+        }
+        var raw = record.Id != null ? record.Id : record.id;
+        if (raw == null || raw === "") {
+            return null;
+        }
+        var id = String(raw).trim();
+        if (!id || id === "0") {
+            return null;
+        }
+        return id;
+    }
+
+    function assignHasSavedRecord(record) {
+        return !!assignRecordId(record);
+    }
+
+    /** Assign grid: print allowed for Active or Inactive when RFID assignment row exists. */
+    function assignGridPrintAllowed(record) {
+        return isAssignRecordsScope() && assignHasSavedRecord(record);
+    }
+
+    function parseActionRecordId(raw) {
+        if (raw == null) {
+            return null;
+        }
+        var id = String(raw).trim();
+        if (!id || id === "0") {
+            return null;
+        }
+        return id;
+    }
+
+    function todayIsoDateLocal() {
+        var d = new Date();
+        var m = String(d.getMonth() + 1);
+        var day = String(d.getDate());
+        if (m.length < 2) m = "0" + m;
+        if (day.length < 2) day = "0" + day;
+        return d.getFullYear() + "-" + m + "-" + day;
+    }
+
+    /** Assign scope: card/grid issue date = RFID_CARD_ASSIGN.PRINT_DATE. */
+    function assignPrintDateDisplay(record) {
+        if (!record) return "";
+        var printDt = recordField(record, "PrintDate");
+        if (printDt) return printDt;
+        return recordField(record, "IssueDate");
+    }
+
+    /** Assign preview/print: show today when no RFID assignment dates exist yet. */
+    function assignCardIssueDateSource(record) {
+        if (!record) return todayIsoDateLocal();
+        var printDt = recordField(record, "PrintDate");
+        if (printDt) return printDt;
+        var issueDt = recordField(record, "IssueDate");
+        if (issueDt) return issueDt;
+        return todayIsoDateLocal();
+    }
+
+    function assignStatusDateDisplay(record) {
+        if (!record) return "—";
+        if (isAssignRecordsScope()) {
+            var printAsIssue = assignPrintDateDisplay(record);
+            if (isActiveStatus(record.Status)) {
+                return printAsIssue || "—";
+            }
+            if ((record.Status || "").toLowerCase() === "inactive") {
+                return record.ExpiryDate && String(record.ExpiryDate).trim()
+                    ? record.ExpiryDate
+                    : printAsIssue || "—";
+            }
+            return printAsIssue || "—";
+        }
+        if (isActiveStatus(record.Status)) {
+            return record.IssueDate && String(record.IssueDate).trim() ? record.IssueDate : "—";
+        }
+        if ((record.Status || "").toLowerCase() === "inactive") {
+            return record.ExpiryDate && String(record.ExpiryDate).trim()
+                ? record.ExpiryDate
+                : record.IssueDate && String(record.IssueDate).trim()
+                  ? record.IssueDate
+                  : "—";
+        }
+        return record.IssueDate && String(record.IssueDate).trim() ? record.IssueDate : "—";
+    }
+
     function printCardButtonHtml(record) {
         if (!can("print")) {
             return "";
         }
         var active = isActiveStatus(record.Status);
-        var id = esc(record.Id);
+        var recordId = assignRecordId(record);
+        var idAttr = esc(recordId || recordField(record, "Id") || "0");
+        var empAttr = esc(recordField(record, "EmpId") || "");
+        if (isAssignRecordsScope()) {
+            return (
+                '<button type="button" class="btn-print-card" data-id="' + idAttr + '" data-emp-id="' + empAttr + '" ' +
+                'title="Print card from V_EMPS employee profile">' +
+                svgPrint +
+                " Print Card</button>"
+            );
+        }
         if (!active) {
             return (
-                '<button type="button" class="btn-print-card is-disabled" data-id="' + id + '" disabled ' +
+                '<button type="button" class="btn-print-card is-disabled" data-id="' + idAttr + '" disabled ' +
                 'title="Print is only available for active records">' + svgPrint + " Print Card</button>"
             );
         }
-        return '<button type="button" class="btn-print-card" data-id="' + id + '">' + svgPrint + " Print Card</button>";
+        return '<button type="button" class="btn-print-card" data-id="' + idAttr + '">' + svgPrint + " Print Card</button>";
     }
 
     function voucherButtonHtml(record) {
         if (!can("view") && !can("print")) {
+            return "";
+        }
+        if (isAssignRecordsScope() && !assignHasSavedRecord(record)) {
             return "";
         }
         return (
@@ -265,6 +506,12 @@
     function setPrintButtonForRecord(id, active) {
         var btn = document.querySelector('.btn-print-card[data-id="' + id + '"]');
         if (!btn) return;
+        if (isAssignRecordsScope()) {
+            btn.disabled = false;
+            btn.classList.remove("is-disabled");
+            btn.removeAttribute("title");
+            return;
+        }
         btn.disabled = !active;
         btn.classList.toggle("is-disabled", !active);
         if (!active) {
@@ -298,9 +545,12 @@
     }
 
     function statusToggleCell(record) {
+        if (isAssignRecordsScope() && !isToggleableRecordStatus(record.Status)) {
+            return statusBadge(record.Status);
+        }
         var dash = document.body.classList.contains("dashboard-v2");
         if (dash) {
-            return statusPillHtml(record, can("status"));
+            return statusPillHtml(record, can("status") && isToggleableRecordStatus(record.Status));
         }
         if (!can("status")) {
             return statusBadge(record.Status);
@@ -332,8 +582,9 @@
     }
 
     function findCachedRecord(id) {
-        for (var i = 0; i < cachedRows.length; i++) {
-            if (String(cachedRows[i].Id) === String(id)) return cachedRows[i];
+        var list = isAssignRecordsScope() ? cachedAllRows : cachedRows;
+        for (var i = 0; i < list.length; i++) {
+            if (String(list[i].Id) === String(id)) return list[i];
         }
         return null;
     }
@@ -348,14 +599,18 @@
     function updateStats(rows) {
         var total = rows.length;
         var active = 0;
+        var inactive = 0;
         var approved = 0;
         for (var i = 0; i < rows.length; i++) {
-            if ((rows[i].Status || "").toLowerCase() === "active") active++;
+            if (isInactiveStatus(rows[i].Status)) inactive++;
+            else if (isActiveStatus(rows[i].Status)) active++;
             if ((rows[i].IsApproved || "").toLowerCase() === "yes") approved++;
         }
         document.getElementById("statTotal").textContent = String(total);
-        document.getElementById("statActive").textContent = String(active);
+        var statActiveEl = document.getElementById("statActive");
+        if (statActiveEl) statActiveEl.textContent = String(active);
         document.getElementById("statApproved").textContent = String(approved);
+        updateAssignTabCounts(rows);
     }
 
     function relationshipTableCell(rel) {
@@ -364,12 +619,110 @@
         return esc(label);
     }
 
+    function assignGridRfidInputCell(r) {
+        var rfid = String(r.RfidNumber || "").trim();
+        if (!can("edit")) {
+            return rfid ? '<span class="rfid-mono">' + esc(rfid) + "</span>" : '<span class="status-remarks-empty">—</span>';
+        }
+        return (
+            '<input type="text" class="assign-rfid-input rfid-mono" autocomplete="off" spellcheck="false" ' +
+            'data-emp-id="' +
+            esc(r.EmpId) +
+            '" data-assign-id="' +
+            esc(r.Id || "0") +
+            '" data-original="' +
+            esc(rfid) +
+            '" value="' +
+            esc(rfid) +
+            '" placeholder="Enter RFID" maxlength="50" aria-label="RFID for employee ' +
+            esc(r.EmpId) +
+            '" />'
+        );
+    }
+
+    function findCachedByEmpId(empId) {
+        var list = isAssignRecordsScope() ? cachedAllRows : cachedRows;
+        for (var i = 0; i < list.length; i++) {
+            if (String(list[i].EmpId) === String(empId)) {
+                return list[i];
+            }
+        }
+        return null;
+    }
+
+    function syncAssignGridRfidSave(record) {
+        if (!record || !record.EmpId) {
+            return;
+        }
+        var row = findCachedByEmpId(record.EmpId);
+        if (!row) {
+            return;
+        }
+        row.Id = record.Id;
+        row.RfidNumber = record.RfidNumber;
+        row.Status = record.Status;
+        row.IssueDate = record.IssueDate;
+        row.IssuedBy = record.IssuedBy;
+        row.IsApproved = record.IsApproved;
+        row.CreatedDate = record.CreatedDate;
+        row.StatusRemarks = record.StatusRemarks;
+        updateStats(cachedAllRows.length ? cachedAllRows : cachedRows);
+        syncAssignTabFilteredRows();
+        refreshTableFromCache();
+        if (assignHasSavedRecord(record)) {
+            setAssignStatusTab("assigned");
+        }
+    }
+
+    function saveAssignGridRfid(inputEl) {
+        if (!inputEl || !isAssignRecordsScope() || !can("edit")) {
+            return;
+        }
+        var empId = (inputEl.getAttribute("data-emp-id") || "").trim();
+        var original = (inputEl.getAttribute("data-original") || "").trim();
+        var next = (inputEl.value || "").trim();
+        if (!empId) {
+            return;
+        }
+        if (next === original) {
+            return;
+        }
+        if (!next) {
+            showAlert("Enter an RFID number before leaving the field.", true);
+            inputEl.value = original;
+            return;
+        }
+        inputEl.disabled = true;
+        inputEl.classList.add("is-saving");
+        var body = new URLSearchParams();
+        body.set("action", "savegridrfid");
+        body.set("empId", empId);
+        body.set("rfidNumber", next);
+        fetchJson(recordsApiUrl(""), { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
+            .then(function (payload) {
+                var record = payload.Record;
+                if (!record) {
+                    throw new Error("Saved but record was not returned.");
+                }
+                syncAssignGridRfidSave(record);
+                showAlert("RFID saved for employee " + empId + ".", false);
+            })
+            .catch(function (err) {
+                inputEl.value = original;
+                showAlert((err && err.message) || "Could not save RFID.", true);
+            })
+            .finally(function () {
+                inputEl.disabled = false;
+                inputEl.classList.remove("is-saving");
+            });
+    }
+
     function renderActionsCell(r) {
         var parts = ['<div class="records-actions">'];
-        if (can("view")) {
+        if (can("view") && (!isAssignRecordsScope() || assignHasSavedRecord(r))) {
             parts.push('<button type="button" class="btn-view" data-id="' + esc(r.Id) + '">' + svgView + " View details</button>");
         }
-        if (can("edit")) {
+        if (can("edit") && !isAssignRecordsScope()) {
             parts.push('<button type="button" class="btn-edit" data-id="' + esc(r.Id) + '">' + svgEdit + " Edit</button>");
         }
         parts.push(printCardButtonHtml(r));
@@ -398,6 +751,22 @@
                     statusRemarksCell(r.StatusRemarks),
                     renderActionsCell(r)
                 ]);
+            } else if (isAssignRecordsScope()) {
+                data.push([
+                    assignHasSavedRecord(r) ? esc(r.Id) : "—",
+                    esc(r.EmpId),
+                    esc(recordField(r, "EmployeeName") || "—"),
+                    esc(recordField(r, "Designation") || "—"),
+                    esc(recordField(r, "Department") || "—"),
+                    assignGridRfidInputCell(r),
+                    esc(assignStatusDateDisplay(r)),
+                    issuerCell(r.IssuedBy),
+                    approvedBadge(r.IsApproved),
+                    esc(r.CreatedDate || "—"),
+                    statusToggleCell(r),
+                    statusRemarksCell(r.StatusRemarks),
+                    renderActionsCell(r)
+                ]);
             } else {
                 data.push([
                     esc(r.Id),
@@ -417,7 +786,13 @@
     }
 
     function initOrRefreshTable(rows) {
-        cachedRows = rows || [];
+        if (isAssignRecordsScope()) {
+            cachedAllRows = rows || [];
+            syncAssignTabFilteredRows();
+        } else {
+            cachedAllRows = [];
+            cachedRows = rows || [];
+        }
         var data = renderTableRows(cachedRows);
         if (!table) {
             var columnDefs;
@@ -428,6 +803,14 @@
                     { targets: [9], className: "dt-status", orderable: false },
                     { targets: [10], className: "dt-status-remarks" },
                     { targets: [11], className: "dt-actions" }
+                ];
+            } else if (isAssignRecordsScope()) {
+                columnDefs = [
+                    { targets: [0, 1], className: "rfid-mono" },
+                    { targets: [5], orderable: true },
+                    { targets: [10], className: "dt-status", orderable: false },
+                    { targets: [11], className: "dt-status-remarks" },
+                    { targets: [12], className: "dt-actions" }
                 ];
             } else {
                 columnDefs = [
@@ -440,14 +823,16 @@
             }
             table = $("#recordsTable").DataTable({
                 data: data,
-                order: [[0, "desc"]],
+                order: isAssignRecordsScope() ? [[1, "asc"]] : [[0, "desc"]],
                 pageLength: 15,
                 lengthMenu: [[10, 15, 25, 50, -1], [10, 15, 25, 50, "All"]],
                 language: {
                     search: "",
                     searchPlaceholder: isFamilyRecordsScope()
                         ? "Search by card name, employee ID or RFID"
-                        : "Search by name, ID or RFID tag",
+                        : isAssignRecordsScope()
+                          ? "Search by name, department, designation, ID or RFID"
+                          : "Search by name, ID or RFID tag",
                     lengthMenu: "Show: _MENU_ rows",
                     info: "Showing _START_ to _END_ of _TOTAL_ records",
                     infoEmpty: "No records to show",
@@ -469,15 +854,21 @@
         }
     }
 
-    function syncCachedStatusChange(id, status, remarks) {
-        for (var i = 0; i < cachedRows.length; i++) {
-            if (String(cachedRows[i].Id) === String(id)) {
-                cachedRows[i].Status = status;
-                if (remarks != null) cachedRows[i].StatusRemarks = remarks;
+    function syncCachedStatusChange(id, status, remarks, record) {
+        var list = isAssignRecordsScope() ? cachedAllRows : cachedRows;
+        for (var i = 0; i < list.length; i++) {
+            if (String(list[i].Id) === String(id)) {
+                list[i].Status = status;
+                if (remarks != null) list[i].StatusRemarks = remarks;
+                if (record) {
+                    if (record.IssueDate != null) list[i].IssueDate = record.IssueDate;
+                    if (record.ExpiryDate != null) list[i].ExpiryDate = record.ExpiryDate;
+                }
                 break;
             }
         }
-        updateStats(cachedRows);
+        updateStats(isAssignRecordsScope() ? cachedAllRows : cachedRows);
+        syncAssignTabFilteredRows();
         refreshTableFromCache();
     }
 
@@ -590,8 +981,12 @@
                 }
                 var newStatus = payload.Status || status;
                 var newRemarks = (payload && payload.StatusRemarks) || remarks || "";
-                syncCachedStatusChange(id, newStatus, newRemarks);
-                setPrintButtonForRecord(id, isActiveStatus(newStatus));
+                syncCachedStatusChange(id, newStatus, newRemarks, payload.Record || null);
+                if (isAssignRecordsScope()) {
+                    setPrintButtonForRecord(id, true);
+                } else {
+                    setPrintButtonForRecord(id, isActiveStatus(newStatus));
+                }
                 applyStatusChangeUi(uiCtx, newStatus);
                 return recordsSweetAlert(
                     "success",
@@ -638,8 +1033,12 @@
                 var label = document.getElementById("recordsTableLabel");
                 if (label && payload.TableName) label.textContent = payload.TableName;
                 var rows = payload.Records || [];
-                updateStats(rows);
                 initOrRefreshTable(rows);
+                updateStats(isAssignRecordsScope() ? cachedAllRows : rows);
+                if (isAssignRecordsScope()) {
+                    updateAssignPanelTitleForTab();
+                    updateAssignTabCounts(cachedAllRows);
+                }
             })
             .catch(function (err) {
                 showAlert((err && err.message) || "Network error while loading records.", true);
@@ -647,9 +1046,16 @@
             });
     }
 
-    function resolvePhotoUrl(path) {
+    function resolvePhotoUrl(path, empId) {
+        if (window.RfidPhotos && window.RfidPhotos.employeePhotoUrls) {
+            return window.RfidPhotos.employeePhotoUrls(path, empId).primary;
+        }
         if (window.RfidPhotos) {
             return window.RfidPhotos.displayUrl(path);
+        }
+        if (empId && window.RfidPhotos && window.RfidPhotos.employeeImageUrl) {
+            var direct = window.RfidPhotos.employeeImageUrl(empId);
+            if (direct) return direct;
         }
         if (!path) return "";
         var p = String(path).trim();
@@ -658,7 +1064,10 @@
         return "EmpPhoto.ashx?p=" + encodeURIComponent(p);
     }
 
-    function resolvePhotoFallback(path) {
+    function resolvePhotoFallback(path, empId) {
+        if (window.RfidPhotos && window.RfidPhotos.employeePhotoUrls) {
+            return window.RfidPhotos.employeePhotoUrls(path, empId).fallback;
+        }
         if (window.RfidPhotos) {
             return window.RfidPhotos.handlerUrl(path);
         }
@@ -684,8 +1093,8 @@
     }
 
     function renderPhotoBlock(record) {
-        var url = resolvePhotoUrl(record.PhotoPath);
-        var fallback = resolvePhotoFallback(record.PhotoPath);
+        var url = resolvePhotoUrl(record.PhotoPath, record.EmpId);
+        var fallback = resolvePhotoFallback(record.PhotoPath, record.EmpId);
         if (url && fallback && url === fallback && window.RfidPhotos) {
             fallback = window.RfidPhotos.publicUrl(record.PhotoPath);
         }
@@ -1071,16 +1480,14 @@
         var dgn = record.Designation ? String(record.Designation).toUpperCase() : "—";
         var dept = record.Department ? String(record.Department).toUpperCase() : "—";
         var proj = record.ProjectLocation ? String(record.ProjectLocation).toUpperCase() : "—";
-        var photoUrl = resolvePhotoUrl(record.PhotoPath);
-        var fallback = window.RfidPhotos ? window.RfidPhotos.publicUrl(record.PhotoPath) : "";
+        var photoUrl = resolvePhotoUrl(record.PhotoPath, record.EmpId);
+        var fallback = resolvePhotoFallback(record.PhotoPath, record.EmpId);
         var logo = appRoot() + "Images/logo.png";
         var sign = appRoot() + "Images/signature.png";
-        var gradeBadge = (record.Grade && String(record.Grade).trim())
-            ? String(record.Grade).trim().toUpperCase()
-            : "EMPLOYEE";
+        var gradeBadge = resolveCardGradeBadge(record);
         var img =
             photoUrl
-                ? ('<img src="' + esc(photoUrl) + '" alt="" data-fallback="' + esc(fallback) + '" ' +
+                ? ('<img src="' + esc(photoUrl) + '" alt="" data-emp-id="' + esc(record.EmpId || "") + '" data-fallback="' + esc(fallback) + '" ' +
                     'onerror="if(this.dataset.fallback&&!this.dataset.tried){this.dataset.tried=1;this.src=this.dataset.fallback;}" />')
                 : "";
 
@@ -1102,21 +1509,32 @@
             '<div class="card-print-page card-print-page--back">' +
             '<div class="id-card back-card">' +
             '<div class="back-details">' +
-            '<div class="back-row"><span class="back-label">Card ID:</span><span class="back-value">' + esc(valOrDash(record.CardId)) + "</span></div>" +
-            '<div class="back-row"><span class="back-label">Joining Date:</span><span class="back-value">' + esc(formatCardBackDate(record.JoiningDate)) + "</span></div>" +
-            '<div class="back-row"><span class="back-label">Issue Date:</span><span class="back-value">' + esc(formatCardBackDate(record.IssueDate)) + "</span></div>" +
-            '<div class="back-row"><span class="back-label">Expiry Date:</span><span class="back-value">' + esc(formatCardBackDate(record.ExpiryDate)) + "</span></div>" +
-            '<div class="back-row"><span class="back-label">Blood Group:</span><span class="back-value">' + esc(valOrDash(record.BloodGroup)) + "</span></div>" +
-            '<div class="back-row"><span class="back-label">CNIC:</span><span class="back-value">' + esc(valOrDash(record.Cnic)) + "</span></div>" +
-            '<div class="back-row"><span class="back-label">Emergency #:</span><span class="back-value">' + esc(valOrDash(record.EmergencyNo)) + "</span></div>" +
+            '<div class="back-row"><span class="back-label">Joining Date:</span><span class="back-value">' + esc(formatCardBackDate(recordField(record, "JoiningDate"))) + "</span></div>" +
+            '<div class="back-row"><span class="back-label">Issue Date:</span><span class="back-value">' +
+            esc(
+                formatCardBackDate(
+                    isAssignRecordsScope() ? assignCardIssueDateSource(record) : recordField(record, "IssueDate")
+                )
+            ) +
+            "</span></div>" +
+            '<div class="back-row"><span class="back-label">Expiry Date:</span><span class="back-value">AS PER RENEWAL</span></div>' +
+            '<div class="back-row"><span class="back-label">Blood Group:</span><span class="back-value">' + esc(valOrDash(recordField(record, "BloodGroup"))) + "</span></div>" +
+            '<div class="back-row"><span class="back-label">CNIC:</span><span class="back-value">' + esc(valOrDash(recordField(record, "Cnic"))) + "</span></div>" +
+            '<div class="back-row"><span class="back-label">Emergency #:</span><span class="back-value">' + esc(valOrDash(recordField(record, "EmergencyNo"))) + "</span></div>" +
             "</div>" +
             '<div class="back-notes">' +
             "<p>The Employee ID card is replaceable if there is a change in employee's designation or department.</p>" +
             "<p><strong>Return:</strong><br />The Employee ID card is property of Bahria Town (Pvt) Ltd. and must be returned to HR Department upon the disengagement of services.</p>" +
             '<div class="authority-container">' +
-            '<div class="authority-text"><strong>Issuing Authority:</strong><br />HR Department Bahria Town</div>' +
-            '<div class="authority-sign"><img src="' + esc(sign) + '" alt="" onerror="this.style.display=\'none\'" /><div class="sign-line"></div><div class="sign-label">HOD SIGN</div></div>' +
-            "</div></div>" +
+            '<div class="authority-text">' +
+            '<p class="authority-text__line"><strong>Issuing Authority:</strong></p>' +
+            '<p class="authority-text__line">HR Department Bahria<br />Town</p>' +
+            "</div>" +
+            '<div class="authority-sign">' +
+            '<img class="authority-sign__img" src="' + esc(sign) + '" alt="" onerror="this.style.display=\'none\'" />' +
+            '<div class="sign-line"></div>' +
+            '<div class="sign-label">SGM HR</div>' +
+            "</div></div></div>" +
             '<div class="back-footer">' +
             "<p><strong>If found please return to</strong></p>" +
             "<p>HR Department.</p>" +
@@ -1142,7 +1560,9 @@
         opts = opts || {};
         var isFamily = opts.mode === "family";
         var src = opts.source || {};
-        var printIso = displayDateToIso(src.PrintDate);
+        var printIso = isAssignRecordsScope() && !isFamily
+            ? todayIsoDateLocal()
+            : displayDateToIso(src.PrintDate) || todayIsoDateLocal();
         var issuedByValue = resolveIssuedByForPrint(src.IssuedBy);
         var createdDisplay = src.CreatedDate && String(src.CreatedDate).trim() ? src.CreatedDate : "—";
         var recordId = src.Id != null ? String(src.Id) : "";
@@ -1153,24 +1573,42 @@
         var createdId = isFamily ? "printFamilyCreatedDisplay" : "printCardCreatedDisplay";
         var hiddenId = isFamily ? "printFamilyRecordId" : "printCardRecordId";
         var errId = isFamily ? "printFamilyAssignError" : "printAssignError";
+        var skipEtag = !isFamily && isAssignRecordsScope();
+        var empHidden =
+            !isFamily && isAssignRecordsScope()
+                ? '<input type="hidden" id="printCardEmpId" value="' + esc(recordField(src, "EmpId") || "") + '" />'
+                : "";
+        var etagBlock = skipEtag
+            ? ""
+            : '<div class="edit-field edit-field--full">' +
+              '<label for="' + etagId + '">ETAG <span class="req">*</span></label>' +
+              '<input type="text" id="' + etagId + '" class="edit-input rfid-mono" maxlength="50" placeholder="Electronic tag ID" value="' +
+              esc(src.Etag || "") +
+              '" />' +
+              '<p class="print-assign-hint">Required before printing. E-Tag for the printed card (not on the request form).</p>' +
+              "</div>";
         return (
             '<div class="print-assign-fields">' +
             '<input type="hidden" id="' + hiddenId + '" value="' + esc(recordId) + '" />' +
+            empHidden +
             '<div class="edit-field edit-field--full">' +
             '<label for="' + rfidId + '">RFID number <span class="req">*</span></label>' +
             '<input type="text" id="' + rfidId + '" class="edit-input rfid-mono" maxlength="50" placeholder="e.g. 123456" value="' + esc(src.RfidNumber || "") + '" />' +
             '<p class="print-assign-hint">Required before printing. Assign the physical card tag here.</p>' +
             "</div>" +
-            '<div class="edit-field edit-field--full">' +
-            '<label for="' + etagId + '">ETAG <span class="req">*</span></label>' +
-            '<input type="text" id="' + etagId + '" class="edit-input rfid-mono" maxlength="50" placeholder="Electronic tag ID" value="' +
-            esc(src.Etag || "") +
-            '" />' +
-            '<p class="print-assign-hint">Required before printing. E-Tag for the printed card (not on the request form).</p>' +
-            "</div>" +
+            etagBlock +
             '<div class="edit-field">' +
-            '<label for="' + printId + '">Print date <span class="req">*</span></label>' +
-            '<input type="date" id="' + printId + '" class="edit-input" value="' + esc(printIso) + '" />' +
+            '<label for="' + printId + '">Print date' +
+            (isAssignRecordsScope() && !isFamily ? "" : ' <span class="req">*</span>') +
+            "</label>" +
+            '<input type="date" id="' + printId + '" class="edit-input"' +
+            (isAssignRecordsScope() && !isFamily ? ' readonly="readonly" title="Uses today\'s date when saving"' : "") +
+            ' value="' +
+            esc(printIso) +
+            '" />' +
+            (isAssignRecordsScope() && !isFamily
+                ? '<p class="print-assign-hint">Saved automatically as today\'s date (no manual entry).</p>'
+                : "") +
             "</div>" +
             '<div class="edit-field">' +
             '<label for="' + issuedId + '">Issued by <span class="req">*</span></label>' +
@@ -1203,7 +1641,12 @@
             roField("Emergency #", record.EmergencyNo) +
             roField("Status", record.Status) +
             roField("Status remarks", record.StatusRemarks) +
-            roField("Issue date", record.IssueDate) +
+            roField(
+                "Issue date",
+                isAssignRecordsScope()
+                    ? formatCardBackDate(assignCardIssueDateSource(record))
+                    : record.IssueDate
+            ) +
             roField("Expiry date", record.ExpiryDate) +
             roField("Approved", record.IsApproved) +
             roField("Approved date", record.ApprovedDate) +
@@ -1514,7 +1957,14 @@
         var printDate = printEl ? String(printEl.value || "").trim() : "";
         var issuedBy = issuedEl ? String(issuedEl.value || "").trim() : "";
         var created = createdEl ? String(createdEl.textContent || "").trim() : "";
-        if (!rfid || !etag || !printDate || !issuedBy) {
+        if (prefix === "printCard" && isAssignRecordsScope()) {
+            return !!document.getElementById("printCardPreviewArea");
+        }
+        var etagRequired = prefix !== "printCard" || !isAssignRecordsScope();
+        if (!rfid || !printDate || !issuedBy) {
+            return false;
+        }
+        if (etagRequired && !etag) {
             return false;
         }
         if (!created || created === "—" || created === "-") {
@@ -1563,7 +2013,9 @@
             return;
         }
         var ok = printAssignmentIsComplete();
-        var empTitle = "Fill RFID number, ETAG, print date, issued by, and ensure created date is set.";
+        var empTitle = isAssignRecordsScope()
+            ? "Fill RFID number and issued by to print."
+            : "Fill RFID number, ETAG, print date, issued by, and ensure created date is set.";
         setPrintActionButtonState(btnPrint, ok, empTitle);
         setPrintActionButtonState(btnPdf, ok, empTitle);
     }
@@ -1572,6 +2024,52 @@
         var isFamily = activePrintTab() === "family";
         var idEl = document.getElementById(isFamily ? "printFamilyRecordId" : "printCardRecordId");
         var id = idEl ? idEl.value : "";
+        var assignEmpEl = document.getElementById("printCardEmpId");
+        var assignEmpId = assignEmpEl ? String(assignEmpEl.value || "").trim() : "";
+        if (!isFamily && isAssignRecordsScope()) {
+            showPrintAssignError("");
+            var rfidOnly = ((document.getElementById("printCardRfidNumber") || {}).value || "").trim();
+            if (rfidOnly && assignEmpId) {
+                var body = new URLSearchParams();
+                body.set("action", "savegridrfid");
+                body.set("empId", assignEmpId);
+                body.set("rfidNumber", rfidOnly);
+                var btn = document.getElementById("btnSavePrintAssignment");
+                var label = btn ? btn.textContent : "";
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Saving…";
+                }
+                fetchJson(recordsApiUrl(""), { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
+                    .then(function (payload) {
+                        if (!payload || !payload.Record) {
+                            throw new Error((payload && payload.Error) || "Unable to save RFID.");
+                        }
+                        var saved = mergeAssignGridRowForPrint(payload.Record, assignEmpId);
+                        syncAssignGridRfidSave(saved);
+                        refreshPrintCardPreview(saved, []);
+                        loadRecords();
+                        return recordsSweetAlert("success", "RFID saved", "RFID saved to RFID_CARD_ASSIGN for employee " + assignEmpId + ".");
+                    })
+                    .catch(function (err) {
+                        showPrintAssignError((err && err.message) || "Could not save RFID.");
+                        return recordsSweetAlert("error", "Save failed", (err && err.message) || "Could not save RFID.");
+                    })
+                    .finally(function () {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = label;
+                        }
+                    });
+                return;
+            }
+            recordsSweetAlert(
+                "info",
+                "V_EMPS profile",
+                "Card name, designation, and department come from V_EMPS. Enter RFID here or on the grid to save it to RFID_CARD_ASSIGN."
+            );
+            return;
+        }
         if (!id) {
             showPrintAssignError("Record is still loading.");
             return;
@@ -1595,7 +2093,9 @@
         );
         body.append(
             "printDate",
-            ((document.getElementById(isFamily ? "printFamilyPrintDate" : "printCardPrintDate") || {}).value) || ""
+            isAssignRecordsScope() && !isFamily
+                ? todayIsoDateLocal()
+                : ((document.getElementById(isFamily ? "printFamilyPrintDate" : "printCardPrintDate") || {}).value) || ""
         );
         body.append(
             "rfidNumber",
@@ -1702,7 +2202,70 @@
             });
     }
 
-    function showPrintCard(id) {
+    function assignGridRfidDraftForEmp(empId) {
+        if (!empId) {
+            return "";
+        }
+        var input = document.querySelector('.assign-rfid-input[data-emp-id="' + empId + '"]');
+        return input ? String(input.value || "").trim() : "";
+    }
+
+    function mergeAssignGridRowForPrint(record, empId) {
+        if (!record || !empId) {
+            return record;
+        }
+        var draft = assignGridRfidDraftForEmp(empId);
+        if (draft) {
+            record.RfidNumber = draft;
+        }
+        var row = findCachedByEmpId(empId);
+        if (!row) {
+            return record;
+        }
+        function fillIfEmpty(field) {
+            var cur = recordField(record, field);
+            if (cur) {
+                return;
+            }
+            var fromGrid = recordField(row, field);
+            if (fromGrid) {
+                record[field] = fromGrid;
+            }
+        }
+        fillIfEmpty("Id");
+        fillIfEmpty("PrintDate");
+        fillIfEmpty("ExpiryDate");
+        fillIfEmpty("Status");
+        fillIfEmpty("IssuedBy");
+        if (!recordField(record, "IssueDate") && recordField(record, "PrintDate")) {
+            record.IssueDate = recordField(record, "PrintDate");
+        }
+        fillIfEmpty("IssueDate");
+        fillIfEmpty("RfidNumber");
+        if (isAssignRecordsScope()) {
+            if (!recordField(record, "PrintDate")) {
+                record.PrintDate = todayIsoDateLocal();
+            }
+            if (!recordField(record, "IssueDate")) {
+                record.IssueDate = recordField(record, "PrintDate") || todayIsoDateLocal();
+            }
+        }
+        return record;
+    }
+
+    function refreshPrintCardPreview(record, family) {
+        var bodyEl = document.getElementById("printCardBody");
+        if (!bodyEl || !record) {
+            return;
+        }
+        family = family || [];
+        bodyEl.innerHTML = renderPrintCardLayout(record, family);
+        bindPrintCardUi(record, family);
+        syncPrintCardButton();
+    }
+
+    function showPrintCard(id, options) {
+        options = options || {};
         if (isFamilyRecordsScope()) {
             showFamilyRecordPrintCard(id);
             return;
@@ -1711,27 +2274,48 @@
         body.innerHTML = '<p class="detail-loading">Loading…</p>';
         openPrintModal();
 
-        fetchJson(recordsApiUrl("action=detail&id=" + encodeURIComponent(id)), { cache: "no-store" })
+        var empId = (options.empId || "").trim();
+        var detailUrl;
+        if (isAssignRecordsScope()) {
+            if (!empId) {
+                body.innerHTML = '<p class="detail-loading">Employee ID is missing for print.</p>';
+                return;
+            }
+            detailUrl = recordsApiUrl("action=assignempdetail&empId=" + encodeURIComponent(empId));
+        } else if (parseActionRecordId(id)) {
+            detailUrl = recordsApiUrl("action=detail&id=" + encodeURIComponent(parseActionRecordId(id)));
+        } else {
+            body.innerHTML = '<p class="detail-loading">A valid record ID is required.</p>';
+            return;
+        }
+
+        fetchJson(detailUrl, { cache: "no-store" })
             .then(function (payload) {
                 if (!payload || !payload.Ok || !payload.Record) {
                     body.innerHTML = "<p class=\"detail-loading\">" + esc((payload && payload.Error) || "Unable to load record.") + "</p>";
                     return;
                 }
+                var record = mergeAssignGridRowForPrint(
+                    payload.Record,
+                    empId || recordField(payload.Record, "EmpId")
+                );
                 var family = payload.FamilyCards || [];
-                body.innerHTML = renderPrintCardLayout(payload.Record, family);
-                bindPrintCardUi(payload.Record, family);
-                syncPrintCardButton();
+                refreshPrintCardPreview(record, family);
             })
             .catch(function (err) {
                 body.innerHTML = "<p class=\"detail-loading\">" + esc((err && err.message) || "Network error while loading record.") + "</p>";
             });
     }
 
-    function setEditPhotoPreview(path) {
+    function setEditPhotoPreview(path, empId) {
         var img = document.getElementById("editPhotoImg");
         var ph = document.getElementById("editPhotoPh");
-        var url = resolvePhotoUrl(path);
-        var fallback = window.RfidPhotos ? window.RfidPhotos.publicUrl(path) : "";
+        if (!empId) {
+            var empEl = document.getElementById("editEmpId");
+            empId = empEl ? empEl.value : "";
+        }
+        var url = resolvePhotoUrl(path, empId);
+        var fallback = resolvePhotoFallback(path, empId);
         if (!img || !ph) return;
         if (!url) {
             img.classList.add("is-hidden");
@@ -1843,16 +2427,6 @@
             "Record #" + (record.Id || "—") + " · Employee ID " + (record.EmpId || "—");
 
         setEditPhotoPreview(record.PhotoPath || "");
-    }
-
-    function findCachedRecord(id) {
-        var key = String(id);
-        for (var i = 0; i < cachedRows.length; i++) {
-            if (String(cachedRows[i].Id) === key) {
-                return cachedRows[i];
-            }
-        }
-        return null;
     }
 
     function resetEditForm() {
@@ -2062,23 +2636,88 @@
         }
     }
 
-    function canvasImageToDataUrl(imgEl) {
+    var HEADER_LOGO_DARKEN_BRIGHTNESS = 0.82;
+    var HEADER_LOGO_DARKEN_CONTRAST = 1.08;
+
+    function applyHeaderLogoDarkenToImageData(imageData) {
+        var d = imageData.data;
+        var bright = HEADER_LOGO_DARKEN_BRIGHTNESS;
+        var contrast = HEADER_LOGO_DARKEN_CONTRAST;
+        var i;
+        for (i = 0; i < d.length; i += 4) {
+            if (d[i + 3] === 0) continue;
+            var r = d[i] * bright;
+            var g = d[i + 1] * bright;
+            var b = d[i + 2] * bright;
+            r = ((r / 255 - 0.5) * contrast + 0.5) * 255;
+            g = ((g / 255 - 0.5) * contrast + 0.5) * 255;
+            b = ((b / 255 - 0.5) * contrast + 0.5) * 255;
+            d[i] = Math.max(0, Math.min(255, Math.round(r)));
+            d[i + 1] = Math.max(0, Math.min(255, Math.round(g)));
+            d[i + 2] = Math.max(0, Math.min(255, Math.round(b)));
+        }
+        return imageData;
+    }
+
+    function isHeaderLogoImg(imgEl) {
+        return !!(imgEl && imgEl.closest && imgEl.closest(".header-logo"));
+    }
+
+    function canvasImageToDataUrl(imgEl, options) {
+        options = options || {};
         if (!imgEl || !imgEl.complete || !imgEl.naturalWidth) return null;
         try {
             var canvas = document.createElement("canvas");
             canvas.width = imgEl.naturalWidth;
             canvas.height = imgEl.naturalHeight;
-            canvas.getContext("2d").drawImage(imgEl, 0, 0);
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(imgEl, 0, 0);
+            if (options.headerLogoDarken || isHeaderLogoImg(imgEl)) {
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                ctx.putImageData(applyHeaderLogoDarkenToImageData(imageData), 0, 0);
+            }
             return canvas.toDataURL("image/png");
         } catch (e) {
             return null;
         }
     }
 
+    function dataUrlWithHeaderLogoDarken(dataUrl) {
+        if (!dataUrl || String(dataUrl).indexOf("data:") !== 0) {
+            return Promise.resolve(dataUrl);
+        }
+        return new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                resolve(canvasImageToDataUrl(img, { headerLogoDarken: true }) || dataUrl);
+            };
+            img.onerror = function () {
+                resolve(dataUrl);
+            };
+            img.src = dataUrl;
+        });
+    }
+
+    function pdfProxyEmployeePhotoSrc(src, iframeImg) {
+        if (!src) return src;
+        if (String(src).indexOf("EmpHrPhoto.ashx") >= 0) return src;
+        var empId = iframeImg && iframeImg.getAttribute ? iframeImg.getAttribute("data-emp-id") : "";
+        if (!empId) {
+            var eimgMatch = String(src).match(/EImages\/([^/?#]+)\.(jpg|jpeg|png)/i);
+            if (eimgMatch) {
+                empId = eimgMatch[1];
+            }
+        }
+        if (empId && (String(src).indexOf("172.16.10.54") >= 0 || /EImages\//i.test(src))) {
+            return appRoot() + "EmpHrPhoto.ashx?empId=" + encodeURIComponent(String(empId).trim());
+        }
+        return src;
+    }
+
     function fetchResourceAsDataUrl(url) {
         if (!url) return Promise.resolve(null);
         if (String(url).indexOf("data:") === 0) return Promise.resolve(url);
-        return fetch(url, { credentials: "same-origin", mode: "cors", cache: "force-cache" })
+        return fetch(url, { credentials: "same-origin", cache: "force-cache" })
             .then(function (response) {
                 if (!response.ok) throw new Error("fetch failed");
                 return response.blob();
@@ -2113,6 +2752,9 @@
         if (iframeImg.closest(".header-photo")) {
             return previewRoot.querySelector(".header-photo img");
         }
+        if (iframeImg.closest(".header-logo")) {
+            return previewRoot.querySelector(".header-logo img");
+        }
         var iframeSrc = iframeImg.getAttribute("src") || "";
         var previewImgs = previewRoot.querySelectorAll("img");
         for (i = 0; i < previewImgs.length; i++) {
@@ -2129,8 +2771,11 @@
         Array.prototype.forEach.call(iframeImgs, function (iframeImg) {
             tasks.push(
                 new Promise(function (resolve) {
+                    var isLogo = isHeaderLogoImg(iframeImg);
                     var previewImg = previewRoot ? findPreviewImageForPdf(previewRoot, iframeImg) : null;
-                    var embedded = previewImg ? canvasImageToDataUrl(previewImg) : null;
+                    var embedded = previewImg
+                        ? canvasImageToDataUrl(previewImg, { headerLogoDarken: isLogo })
+                        : null;
                     if (embedded) {
                         iframeImg.setAttribute("src", embedded);
                         resolve();
@@ -2162,13 +2807,27 @@
                         resolve();
                         return;
                     }
+                    src = pdfProxyEmployeePhotoSrc(src, iframeImg);
                     try {
-                        src = new URL(src, appRoot()).href;
+                        if (String(src).indexOf("data:") !== 0 && String(src).indexOf("http") !== 0) {
+                            src = new URL(src, appRoot()).href;
+                        }
                     } catch (urlErr) {
                         /* keep src */
                     }
                     fetchResourceAsDataUrl(src).then(function (dataUrl) {
-                        if (dataUrl) iframeImg.setAttribute("src", dataUrl);
+                        if (!dataUrl) {
+                            resolve();
+                            return;
+                        }
+                        if (isLogo) {
+                            dataUrlWithHeaderLogoDarken(dataUrl).then(function (darkUrl) {
+                                if (darkUrl) iframeImg.setAttribute("src", darkUrl);
+                                resolve();
+                            });
+                            return;
+                        }
+                        iframeImg.setAttribute("src", dataUrl);
                         resolve();
                     });
                 })
@@ -2211,6 +2870,9 @@
             ".card-print-page--front { page-break-after: always !important; break-after: page !important; }" +
             ".card-print-page--back { page-break-after: auto !important; break-after: auto !important; }" +
             ".card-print-root .id-card { width: 330px !important; height: 520px !important; min-width: 330px !important; min-height: 520px !important; max-width: 330px !important; max-height: 520px !important; box-shadow: none !important; transform: none !important; margin: 0 !important; }" +
+            ".card-print-root .id-card.front-card,.card-print-root .front-card{background-color:#d5bd73!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}" +
+            ".card-print-root .grade-badge{background-color:#b8985a!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}" +
+            ".card-print-root .header-logo img,.card-print-root .header-logo img{filter:brightness(0.82) contrast(1.08)!important;-webkit-filter:brightness(0.82) contrast(1.08)!important;}" +
             cr80PdfCaptureOverrideCss("employee")
         );
     }
@@ -2220,7 +2882,7 @@
         var bodyClass = options.bodyClass || "print-card-preview";
         var rootOuterHtml = options.rootHtml || "";
         var siteCss = appRoot() + "Site.css?v=18";
-        var empCardCss = appRoot() + "Content/emp-id-card.css?v=5";
+        var empCardCss = appRoot() + "Content/emp-id-card.css?v=10";
         var baseHref = appRoot();
         var inline =
             options.printKind === "family" ? cr80FamilyPrintInlineCss() : cr80EmployeePrintInlineCss();
@@ -2719,6 +3381,14 @@
 
     function bindEvents() {
         document.getElementById("btnRefreshRecords").addEventListener("click", loadRecords);
+        var assignTabs = document.getElementById("assignRecordsTabs");
+        if (assignTabs) {
+            assignTabs.addEventListener("click", function (e) {
+                var btn = e.target.closest(".assign-records-tab");
+                if (!btn) return;
+                setAssignStatusTab(btn.getAttribute("data-assign-tab"));
+            });
+        }
         var lnkNew = document.getElementById("lnkNewRequest");
         if (lnkNew) {
             lnkNew.addEventListener("click", function (e) {
@@ -2797,13 +3467,23 @@
 
         $("#recordsTable").on("click", ".btn-print-card", function () {
             if (this.disabled || this.classList.contains("is-disabled")) return;
-            var id = this.getAttribute("data-id");
-            if (id) showPrintCard(id);
+            var empId = (this.getAttribute("data-emp-id") || "").trim();
+            showPrintCard(this.getAttribute("data-id"), { empId: empId });
         });
 
         $("#recordsTable").on("click", ".btn-voucher", function () {
             var id = this.getAttribute("data-id");
             if (id) showVoucher(id);
+        });
+
+        $("#recordsTable").on("keydown", ".assign-rfid-input", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+        $("#recordsTable").on("blur", ".assign-rfid-input", function () {
+            saveAssignGridRfid(this);
         });
 
         var voucherClose = document.getElementById("voucherClose");

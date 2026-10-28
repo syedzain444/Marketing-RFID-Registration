@@ -1,5 +1,7 @@
 using System;
+using System.Configuration;
 using System.Web;
+using System.Web.Script.Serialization;
 using System.Web.UI;
 using RFID_Marketing_Form.Data;
 
@@ -61,6 +63,18 @@ namespace RFID_Marketing_Form
             {
                 sidebar.ActiveSection = section;
             }
+        }
+
+        /// <summary>JSON string for window.RFID_EMPLOYEE_IMAGE_URL (use {id} placeholder).</summary>
+        protected string RfidEmployeeImageUrlJson()
+        {
+            var tpl = ConfigurationManager.AppSettings["EmployeeImageUrlTemplate"];
+            if (string.IsNullOrWhiteSpace(tpl))
+            {
+                tpl = "http://172.16.10.54/EImages/EImages/{id}.jpg";
+            }
+
+            return new JavaScriptSerializer().Serialize(tpl.Trim());
         }
     }
 }

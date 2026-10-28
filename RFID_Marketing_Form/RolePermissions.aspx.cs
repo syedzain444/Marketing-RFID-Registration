@@ -57,6 +57,8 @@ namespace RFID_Marketing_Form
 
                 { AppPermissionCodes.ScreenRecords, "Open the employee records list and search." },
 
+                { AppPermissionCodes.ScreenEmployeeRfid, "Open Employee RFID Management (V_EMPS active + RFID_CARD_ASSIGN)." },
+
                 { AppPermissionCodes.ScreenAdmin, "Access administration screens (users and roles)." },
 
                 { AppPermissionCodes.ActionFormSave, "Submit and save a new RFID request." },

@@ -264,6 +264,7 @@
     <Content Include="Controls\MarketingSidebar.ascx" />
     <Content Include="Controls\RfidNewRequestForm.ascx" />
     <Content Include="Records.aspx" />
+    <Content Include="EmployeeRfidManagement.aspx" />
     <Content Include="Vouchers.aspx" />
     <Content Include="Content\vouchers.css" />
     <Content Include="Scripts\rfid-voucher-render.js" />
@@ -274,6 +275,7 @@
     <Content Include="RfidFormSave.ashx" />
     <Content Include="MarketingUsers.ashx" />
     <Content Include="EmpPhoto.ashx" />
+    <Content Include="EmpHrPhoto.ashx" />
     <Content Include="PhotoUpload.ashx" />
     <Content Include="Captcha.ashx" />
     <Content Include="LoginCss.ashx" />
@@ -353,6 +355,7 @@
     <Compile Include="Data\PhotoStorage.cs" />
     <Compile Include="Data\RfidModels.cs" />
     <Compile Include="Data\RfidRepository.cs" />
+    <Compile Include="Data\EmpAssignRfidRepository.cs" />
     <Compile Include="Data\CardVoucherHelper.cs" />
     <Compile Include="Data\CardVoucherRepository.cs" />
     <Compile Include="Data\RfidValidator.cs" />
@@ -424,6 +427,9 @@
     </Compile>
     <Compile Include="EmpPhoto.ashx.cs">
       <DependentUpon>EmpPhoto.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="EmpHrPhoto.ashx.cs">
+      <DependentUpon>EmpHrPhoto.ashx</DependentUpon>
     </Compile>
     <Compile Include="PhotoUpload.ashx.cs">
       <DependentUpon>PhotoUpload.ashx</DependentUpon>

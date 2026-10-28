@@ -103,6 +103,10 @@ namespace RFID_Marketing_Form.Data
         public string ForwardOn { get; set; }
         public string RequesterRemarks { get; set; }
         public string PhotoPath { get; set; }
+        /// <summary>GRD_AB from V_EMPS (employee grade abbreviation).</summary>
+        public string Grade { get; set; }
+        /// <summary>Card footer strip: OFFICIAL if grade &gt; 5, else EMPLOYEE.</summary>
+        public string CardBadge { get; set; }
     }
 
     public class FamilyCardRecord

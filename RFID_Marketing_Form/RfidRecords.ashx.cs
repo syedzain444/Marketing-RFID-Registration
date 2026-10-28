@@ -30,8 +30,10 @@ namespace RFID_Marketing_Form
                 }
 
                 var repo = new RfidRepository();
+                var assignRepo = new EmpAssignRfidRepository();
                 var scope = (context.Request.QueryString["scope"] ?? context.Request.Form["scope"] ?? "employee").Trim().ToLowerInvariant();
                 var isFamilyScope = scope == "family";
+                var isAssignScope = scope == "assign";
 
             if (action == "detail")
             {
@@ -41,9 +43,25 @@ namespace RFID_Marketing_Form
                 {
                     result = RfidRecordsResult.Fail("A valid record ID is required.");
                 }
+                else if (isAssignScope)
+                {
+                    result = assignRepo.GetRecord(id);
+                }
                 else
                 {
                     result = isFamilyScope ? repo.GetFamilyRecord(id) : repo.GetRecord(id);
+                }
+            }
+            else if (action == "assignempdetail")
+            {
+                var empId = (context.Request.QueryString["empId"] ?? context.Request.Form["empId"] ?? string.Empty).Trim();
+                if (!isAssignScope)
+                {
+                    result = RfidRecordsResult.Fail("This action is only available on Employee RFID Management.");
+                }
+                else
+                {
+                    result = assignRepo.GetRecordByEmpId(empId);
                 }
             }
             else if (action == "setstatus")
@@ -58,7 +76,14 @@ namespace RFID_Marketing_Form
                 else
                 {
                     var remarks = (context.Request["remarks"] ?? context.Request.QueryString["remarks"] ?? string.Empty).Trim();
-                    result = isFamilyScope ? repo.SetFamilyStatus(id, status, remarks) : repo.SetStatus(id, status, remarks);
+                    if (isAssignScope)
+                    {
+                        result = assignRepo.SetStatus(id, status, remarks);
+                    }
+                    else
+                    {
+                        result = isFamilyScope ? repo.SetFamilyStatus(id, status, remarks) : repo.SetStatus(id, status, remarks);
+                    }
                 }
             }
             else if (action == "updateprofile")
@@ -68,6 +93,20 @@ namespace RFID_Marketing_Form
                 if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0)
                 {
                     result = RfidRecordsResult.Fail("A valid record ID is required.");
+                }
+                else if (isAssignScope)
+                {
+                    result = assignRepo.UpdateEmployeeProfile(
+                        id,
+                        context.Request["employeeName"],
+                        context.Request["designation"],
+                        context.Request["department"],
+                        context.Request["projectLocation"],
+                        context.Request["joiningDate"],
+                        context.Request["bloodGroup"],
+                        context.Request["cnic"],
+                        context.Request["emergencyNo"],
+                        context.Request["photoPath"]);
                 }
                 else
                 {
@@ -102,6 +141,23 @@ namespace RFID_Marketing_Form
                         context.Request["photoPath"]);
                 }
             }
+            else if (action == "savegridrfid")
+            {
+                var empId = (context.Request["empId"] ?? context.Request.QueryString["empId"] ?? string.Empty).Trim();
+                var rfidNumber = context.Request["rfidNumber"] ?? context.Request.QueryString["rfidNumber"];
+                if (!isAssignScope)
+                {
+                    result = RfidRecordsResult.Fail("This action is only available on Employee RFID Management.");
+                }
+                else
+                {
+                    var user = MarketingAuthContext.CurrentUser(context);
+                    var issuedBy = user != null && !string.IsNullOrWhiteSpace(user.DisplayName)
+                        ? user.DisplayName.Trim()
+                        : (MarketingAuthContext.CurrentEmpId(context) ?? string.Empty);
+                    result = assignRepo.SaveGridRfid(empId, rfidNumber, issuedBy);
+                }
+            }
             else if (action == "updateprintassignment")
             {
                 var idText = (context.Request["id"] ?? string.Empty).Trim();
@@ -109,6 +165,15 @@ namespace RFID_Marketing_Form
                 if (!decimal.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0)
                 {
                     result = RfidRecordsResult.Fail("A valid record ID is required.");
+                }
+                else if (isAssignScope)
+                {
+                    result = assignRepo.UpdatePrintAssignment(
+                        id,
+                        context.Request["issuedBy"],
+                        context.Request["printDate"],
+                        context.Request["rfidNumber"],
+                        context.Request["etag"]);
                 }
                 else
                 {
@@ -141,8 +206,11 @@ namespace RFID_Marketing_Form
             else if (action == "lookupemp")
             {
                 var empId = (context.Request.QueryString["empId"] ?? context.Request.Form["empId"] ?? string.Empty).Trim();
-                var exists = !string.IsNullOrWhiteSpace(empId) && repo.EmployeeRecordExists(empId);
-                var displayName = exists ? repo.TryGetEmployeeDisplayName(empId) : null;
+                var exists = !string.IsNullOrWhiteSpace(empId) &&
+                    (isAssignScope ? assignRepo.EmployeeRecordExists(empId) : repo.EmployeeRecordExists(empId));
+                var displayName = exists
+                    ? (isAssignScope ? assignRepo.TryGetEmployeeDisplayName(empId) : repo.TryGetEmployeeDisplayName(empId))
+                    : null;
                 context.Response.Write(new JavaScriptSerializer().Serialize(new
                 {
                     Ok = true,
@@ -184,7 +252,7 @@ namespace RFID_Marketing_Form
                     }
                     else
                     {
-                        var detail = repo.GetRecord(id);
+                        var detail = isAssignScope ? assignRepo.GetRecord(id) : repo.GetRecord(id);
                         if (!detail.Ok || detail.Record == null)
                         {
                             result = detail;
@@ -214,6 +282,10 @@ namespace RFID_Marketing_Form
                         : voucherRepo.MarkVoucherPaid(voucherId, actor);
                 }
             }
+                else if (isAssignScope)
+                {
+                    result = assignRepo.ListRecords();
+                }
                 else
                 {
                     result = isFamilyScope ? repo.ListFamilyRecords() : repo.ListRecords();
@@ -241,6 +313,7 @@ namespace RFID_Marketing_Form
             switch (action)
             {
                 case "detail":
+                case "assignempdetail":
                     if (!MarketingAuthContext.TryRequireAnyPermission(
                         context,
                         new[]
@@ -266,6 +339,7 @@ namespace RFID_Marketing_Form
                     return true;
                 case "updateprofile":
                 case "updatefamilyprofile":
+                case "savegridrfid":
                     if (!MarketingAuthContext.TryRequirePermission(context, AppPermissionCodes.ActionRecordsEdit, out err))
                     {
                         denied = RfidRecordsResult.Fail(err);

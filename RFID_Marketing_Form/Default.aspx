@@ -268,9 +268,10 @@
         </div>
         </div>
         <script>window.RFID_APP_ROOT = '<%= ResolveUrl("~/") %>';</script>
+        <script>window.RFID_EMPLOYEE_IMAGE_URL = <%= RfidEmployeeImageUrlJson() %>;</script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="Scripts/rfid-photos.js?v=4"></script>
-        <script src="Scripts/rfid-form.js?v=7"></script>
+        <script src="Scripts/rfid-photos.js?v=6"></script>
+        <script src="Scripts/rfid-form.js?v=8"></script>
     </form>
 </body>
 </html>
